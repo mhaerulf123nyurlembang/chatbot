@@ -5,7 +5,7 @@ import base64
 from datetime import datetime
 
 # ⚠️ TEMPELKAN KUNCI API ANDA DI BAWAH INI:
-GROQ_API_KEY_ANDA = "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"
+GROQ_API_KEY_ANDA = "gsk_TEMPELKAN_KUNCI_GROQ_ASLI_DI_SINI"
 GEMINI_API_KEY_ANDA = "AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg"
 
 # Set halaman web agar memiliki tata letak yang bagus dan profesional
@@ -18,7 +18,7 @@ st.markdown("""
         padding-bottom: 20px;
     }
     </style>
-""", unsafe_scale=True)
+""", unsafe_allow_html=True)
 
 # ==========================================
 # 📊 KONFIGURASI SIDEBAR (PANEL KONTROL)
@@ -83,13 +83,13 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
 
-    # 💡 FIX UTAMA: Membuat Container Kolom untuk Menyatukan Input Teks & Mikrofon Suara
+    # Container Kolom untuk Menyatukan Input Teks & Perekam Suara
     input_container = st.container()
     prompt_final = ""
 
     with input_container:
-        # Membagi baris bawah menjadi 2 kolom (Kolom 1 besar untuk Teks, Kolom 2 kecil untuk Mikrofon)
-        col_teks, col_suara = st.columns([6, 2], gap="small") [https://streamlit.io]
+        # 💡 FIX: Tautan luar yang mengganggu di baris ini sudah dihapus total
+        col_teks, col_suara = st.columns([6, 2], gap="small")
         
         with col_teks:
             prompt_teks = st.chat_input("Ketik pesan Anda di sini...")
@@ -98,7 +98,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
 
         with col_suara:
             # Perekam suara diposisikan sejajar di sisi kanan kotak ketik
-            input_suara = st.audio_input("Klik untuk rekam suara:", label_visibility="collapsed") [https://streamlit.io]
+            input_suara = st.audio_input("Klik untuk rekam suara:", label_visibility="collapsed")
             if input_suara:
                 with st.spinner("🎙️ Menerjemahkan suara..."):
                     try:
@@ -155,7 +155,7 @@ else:
     foto_diunggah = st.file_uploader("Pilih berkas gambar Anda (Format: JPG, JPEG, PNG):", type=["jpg", "jpeg", "png"])
 
     if foto_diunggah:
-        col1, col2 = st.columns(2) [https://streamlit.io]
+        col1, col2 = st.columns(2)
         
         with col1:
             st.image(foto_diunggah, caption="Foto Yang Diunggah", use_container_width=True)
@@ -213,3 +213,8 @@ else:
                         if response.status_code == 200:
                             hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
                             st.success("✨ Hasil Pemrosesan Vision AI:")
+                            st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
+                            
+                            st.download_button(
+                                label="💾 Unduh Hasil Teks Ekstraksi (.txt)",
+                                data=hasil_ekstraksi,
