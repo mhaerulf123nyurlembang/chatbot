@@ -1,14 +1,9 @@
 import streamlit as st 
 from groq import Groq
+import requests
+import json
+import base64
 from datetime import datetime
-
-# Mengimpor SDK Resmi Google GenAI terbaru
-try:
-    from google import genai
-    from google.genai import types
-except ImportError:
-    import google.genai as genai
-    from google.genai import types
 
 # 💡 HACKTIV8 BEST PRACTICES: Mengambil API Key dari brankas rahasia (Secrets) Streamlit Cloud
 try:
@@ -79,7 +74,7 @@ if st.sidebar.button("🗑️ Sapukan / Bersihkan Chat", use_container_width=Tru
     st.rerun()
 
 # ==========================================
-# 🤖 MODUL 1: CHAT TEKS & SUARA (GROQ)
+# 🤖 MODUL 1: CHAT TTEKS & SUARA (GROQ)
 # ==========================================
 if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     st.title("⚡ Chatbot AI Super Cepat (Powered by Groq)")
@@ -92,7 +87,6 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
 
-    # Container Kolom untuk Menyatukan Input Teks & Perekam Suara
     input_container = st.container()
     prompt_final = ""
 
@@ -187,27 +181,39 @@ else:
                 with st.spinner("Mengirimkan file gambar ke server Google Vision API..."):
                     try:
                         bytes_foto = foto_diunggah.read()
+                        base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
                         tipe_konten = foto_diunggah.type
 
-                        # 💡 PERBAIKAN TOTAL KUNCI bertipe AQ.:
-                        # Kita panggil variabel GEMINI_API_KEY_ANDA secara eksplisit ke dalam parameter api_key=...
-                        # Cara ini memaksa SDK mengirimkannya murni sebagai API Key biasa (melompati skema Bearer Token GCP)
-                        client_gemini = genai.Client(api_key=GEMINI_API_KEY_ANDA)
+                        # 💡 BYPASS 401 & CONNECTION ERROR: Menembak REST API murni menggunakan request post
+                        # Menaruh key langsung di URL (?key=) memaksa server meloloskan otentikasi kunci bertipe AQ.
+                        url = f"https://googleapis.com{GEMINI_API_KEY_ANDA}"
                         
-                        response = client_gemini.models.generate_content(
-                            model='gemini-2.5-flash',
-                            contents=[
-                                prompt_perintah,
-                                types.Part.from_bytes(
-                                    data=bytes_foto,
-                                    mime_type=tipe_konten,
-                                )
-                            ]
-                        )
-                        hasil_ekstraksi = response.text
+                        headers = {"Content-Type": "application/json"}
                         
-                        st.success("✨ Hasil Pemrosesan Vision AI:")
-                        st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
-                        st.download_button(label="💾 Unduh Hasil Teks Ekstraksi (.txt)", data=hasil_ekstraksi, file_name="hasil_ocr.txt", mime="text/plain")
-                    except Exception as vision_err:
-                        st.error(f"Terjadi kendala pemrosesan gambar via SDK: {vision_err}")
+                        payload = {
+                            "contents": [{
+                                "parts": [
+                                    {"text": prompt_perintah},
+                                    {
+                                        "inlineData": {
+                                            "mimeType": tipe_konten,
+                                            "data": base64_foto
+                                        }
+                                    }
+                                ]
+                            }]
+                        }
+
+                        # Mengirim permintaan jaringan langsung ke gerbang API Google
+                        response = requests.post(url, headers=headers, json=payload)
+                        
+                        if response.status_code == 200:
+                            response_data = response.json()
+                            hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
+                            
+                            st.success("✨ Hasil Pemrosesan Vision AI:")
+                            st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
+                            st.download_button(label="💾 Unduh Hasil Teks Ekstraksi (.txt)", data=hasil_ekstraksi, file_name="hasil_ocr.txt", mime="text/plain")
+                        else:
+                            st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response.text}")
+                            
