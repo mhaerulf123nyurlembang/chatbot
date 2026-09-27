@@ -73,15 +73,18 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)" and len(st.session_state.gro
 # Tombol bersihkan chat
 if st.sidebar.button("🗑️ Sapukan / Bersihkan Chat", use_container_width=True):
     st.session_state.groq_messages = [
-        {"role": "system", "content": "Anda adalah asisten AI yang sangat cerdas, responsif, ramah, dan membantu."}
+        {"role": "system", "content": "Anda adalah asisten AI yang sangat cerdas, responsif, ramah, and membantu."}
     ]
     st.session_state.last_processed_audio = None
     st.rerun()
 
+
 # ==========================================
+# ⚡ EKSEKUSI PENYALURAN MODUL APLIKASI
+# ==========================================
+
 # 🤖 MODUL 1: CHAT TEKS & SUARA (GROQ)
-# ==========================================
-if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
+if "Chat Teks" in mode_aplikasi:
     st.title("⚡ Chatbot AI Super Cepat (Powered by Groq)")
     st.write("Aplikasi live dengan fitur input teks dan transkripsi suara.")
 
@@ -92,7 +95,6 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
 
-    # Container Kolom untuk Menyatukan Input Teks & Perekam Suara
     input_container = st.container()
     prompt_final = ""
 
@@ -147,10 +149,8 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
         except Exception as e:
             st.error(f"Gagal memanggil Groq API: {e}")
 
-# ==========================================
 # 🖼️ MODUL 2: VISION AI & OCR EKSTRAKTOR (GEMINI)
-# ==========================================
-if mode_aplikasi == "🖼️ Vision AI & OCR (Gemini)":
+elif "Vision AI" in mode_aplikasi:
     st.title("🖼️ Vision AI & OCR Ekstraktor Dokumen")
     st.write("Unggah foto kuitansi, tulisan tangan, atau gambar apa saja untuk diekstrak teksnya.")
 
@@ -215,7 +215,11 @@ if mode_aplikasi == "🖼️ Vision AI & OCR (Gemini)":
                     else:
                         st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response.text}")
 
-# ==========================================
-# 🖼️ MODUL 3: TEXT-TO-IMAGE GENERATOR (OPENAI DALL-E 3)
-# ==========================================
-if mode_aplikasi == "🎨 Buat Gambar AI (DALL-E 3 / ChatGPT)":
+# 🎨 MODUL 3: TEXT-TO-IMAGE GENERATOR (OPENAI DALL-E 3)
+elif "Buat Gambar" in mode_aplikasi:
+    st.title("🎨 AI Image Generator (Powered by DALL-E 3 / ChatGPT)")
+    st.write("Ubah ide pikiran Anda menjadi karya seni gambar digital beresolusi tinggi secara instan.")
+
+    client_openai = OpenAI(api_key=OPENAI_API_KEY_ANDA)
+
+    deskripsi_gambar = st.text_area(
