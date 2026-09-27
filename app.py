@@ -115,7 +115,10 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                 model="openai/gpt-oss-120b",
                 messages=st.session_state.groq_messages
             )
-            jawaban_ai = respons.choices.message.content
+            
+            # 💡 FIX UTAMA: Menambahkan indeks [0] untuk membaca list dari objek choices
+            jawaban_ai = respons.choices[0].message.content
+            
             with st.chat_message("assistant"):
                 st.write(jawaban_ai)
             st.session_state.groq_messages.append({"role": "assistant", "content": jawaban_ai})
@@ -189,7 +192,7 @@ else:
                         response_data = response.json()
                         
                         if response.status_code == 200:
-                            hasil_ekstraksi = response_data["candidates"]["content"]["parts"]["text"]
+                            hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
                             st.success("✨ Hasil Pemrosesan Vision AI:")
                             st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
                             
