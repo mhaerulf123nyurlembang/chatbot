@@ -5,7 +5,7 @@ import requests
 GEMINI_API_KEY_ANDA = "AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg"
 
 st.title("🤖 Chatbot AI Google Gemini")
-st.write("Aplikasi live berhasil terotentikasi menggunakan Kunci Auth API Gemini.")
+st.write("Aplikasi live berhasil terotentikasi menggunakan rute interaksi global Google.")
 
 # Tombol Bersihkan Chat
 if st.button("Sapukan / Bersihkan Chat"):
@@ -23,57 +23,45 @@ for msg in st.session_state.gemini_messages:
 
 # Menerima ketikan pesan baru dari pengguna
 if prompt := st.chat_input("Ketik pesan Anda di sini..."):
-    # Tampilkan pesan user ke layar secara instan
     with st.chat_message("user"):
         st.write(prompt)
     
     st.session_state.gemini_messages.append({"role": "user", "text": prompt})
 
-    # Menyusun struktur percakapan agar dipahami endpoint REST API Google
-    payload_contents = []
-    for msg in st.session_state.gemini_messages:
-        api_role = "user" if msg["role"] == "user" else "model"
-        payload_contents.append({
-            "role": api_role,
-            "parts": [{"text": msg["text"]}]
-        })
-
-    # 💡 FIX UTAMA: Alamat URL dibuat bersih tanpa ada variabel yang menempel langsung
-    url = "https://googleapis.com"
+    # 💡 FIX UTAMA: Menggunakan endpoint rute interaksi global yang diwajibkan untuk kunci AQ.
+    url = "https://generativelanguage.googleapis.com/v1beta/interactions"
     
-    # Kunci API dikirimkan secara terpisah melalui parameter data, bukan digabung ke teks URL
-    query_params = {
-        "key": GEMINI_API_KEY_ANDA
-    }
-    
+    # Otentikasi header yang presisi untuk tipe kunci terbaru
     headers = {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "x-goog-api-key": GEMINI_API_KEY_ANDA
     }
     
+    # Skema pengiriman interaksi tunggal berbasis model cloud global aktif
     payload = {
-        "contents": payload_contents
+        "model": "gemini-2.5-flash",
+        "input": prompt
     }
 
     try:
-        # Mengirim data dengan memisahkan url dan params agar tidak memicu NameResolutionError
-        response = requests.post(url, headers=headers, params=query_params, json=payload)
+        # Mengirim data langsung ke gerbang interaksi Google
+        response = requests.post(url, headers=headers, json=payload)
         
         if response.status_code == 200:
             response_data = response.json()
             try:
-                # Mengambil teks balasan dari struktur data Google Gemini
-                jawaban_gemini = response_data["candidates"][0]["content"]["parts"][0]["text"]
+                # Mengambil teks balasan dari struktur interaksi resmi Google
+                jawaban_gemini = response_data["interaction"]["outputText"]
                 
-                # Tampilkan balasan AI di layar web
                 with st.chat_message("assistant"):
                     st.write(jawaban_gemini)
                 
                 st.session_state.gemini_messages.append({"role": "assistant", "text": jawaban_gemini})
-            except (KeyError, IndexError):
+            except (KeyError, TypeError):
                 st.error(f"Format data respons tidak sesuai. Data: {response_data}")
         else:
             try:
-                error_msg = response.json().get("error", {}).get("message", "Terjadi kesalahan otentikasi.")
+                error_msg = response.json().get("error", {}).get("message", "Terjadi kesalahan sistem.")
             except Exception:
                 error_msg = response.text
             st.error(f"Server Google menolak permintaan (Status {response.status_code}): {error_msg}")
