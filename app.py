@@ -100,20 +100,25 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                 prompt_final = prompt_teks
 
         with col_suara:
-            # 💡 FIX VOICE BUG: Menambahkan 'key' khusus agar status widget terkunci dengan aman
-            input_suara = st.audio_input("Klik untuk rekam suara:", label_visibility="collapsed", key="uploader_suara_unik")
+            input_suara = st.audio_input("Klik untuk rekam suara:", label_visibility="collapsed", key="uploader_suara_unik") [https://streamlit.io]
             
             if input_suara:
-                # Mengambil ID file atau nilai biner unik untuk mendeteksi apakah ini audio baru atau lama
                 audio_bytes = input_suara.read()
                 audio_id = hash(audio_bytes)
                 
-                # Hanya jalankan transkripsi jika audio ini belum pernah diproses sebelumnya
                 if st.session_state.last_processed_audio != audio_id:
                     with st.spinner("🎙️ Menerjemahkan suara via Gemini..."):
                         try:
                             base64_audio = base64.b64encode(audio_bytes).decode('utf-8')
-                            url = f"https://googleapis.com{GEMINI_API_KEY_ANDA}"
+                            
+                            # 💡 FIX URL UTAMA: Alamat URL audio dibersihkan total dari variabel penempelan
+                            url_audio = "https://googleapis.com"
+                            
+                            # Mengirim API Key lewat parameter terpisah agar tidak merusak host domain
+                            query_params = {
+                                "key": GEMINI_API_KEY_ANDA
+                            }
+                            
                             headers = {"Content-Type": "application/json"}
                             payload = {
                                 "contents": [{
@@ -129,14 +134,15 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                                 }]
                             }
                             
-                            response = requests.post(url, headers=headers, json=payload)
+                            # Eksekusi dengan memisahkan url_audio dan params secara presisi
+                            response = requests.post(url_audio, headers=headers, params=query_params, json=payload)
+                            
                             if response.status_code == 200:
                                 response_data = response.json()
                                 prompt_final = response_data["candidates"]["content"]["parts"]["text"].strip()
-                                # Kunci ID audio ini agar tidak diproses ulang saat rerun berikutnya
                                 st.session_state.last_processed_audio = audio_id
                             else:
-                                st.error(f"Gagal memproses audio (Status {response.status_code})")
+                                st.error(f"Gagal memproses audio (Status {response.status_code}): {response.text}")
                         except Exception as audio_err:
                             st.error(f"Kendala audio: {audio_err}")
 
@@ -173,7 +179,7 @@ else:
     foto_diunggah = st.file_uploader("Pilih berkas gambar Anda (Format: JPG, JPEG, PNG):", type=["jpg", "jpeg", "png"])
 
     if foto_diunggah:
-        col1, col2 = st.columns(2)
+        col1, col2 = st.columns(2) [https://streamlit.io]
         
         with col1:
             st.image(foto_diunggah, caption="Foto Yang Diunggah", use_container_width=True)
@@ -204,7 +210,3 @@ else:
             if st.button("🚀 Ekstrak & Jalankan Vision AI", use_container_width=True):
                 with st.spinner("Mengirimkan file gambar ke server Google Vision API..."):
                     bytes_foto = foto_diunggah.read()
-                    base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
-                    tipe_konten = foto_diunggah.type
-
-                    url = f"https://googleapis.com{GEMINI_API_KEY_ANDA}"
