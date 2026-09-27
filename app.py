@@ -33,7 +33,6 @@ if "groq_messages" not in st.session_state:
 # 🌟 FITUR TAMBAHAN 1: EKSPOR CHAT (DOWNLOAD TXT)
 st.sidebar.subheader("💾 Manajemen Data")
 if len(st.session_state.groq_messages) > 1:
-    # Menyusun isi teks untuk file log download
     log_teks = f"RIWAYAT OBROLAN CHATBOT - Dibuat pada {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
     log_teks += "="*50 + "\n\n"
     for msg in st.session_state.groq_messages:
@@ -41,7 +40,6 @@ if len(st.session_state.groq_messages) > 1:
             role_label = "PENGGUNA" if msg["role"] == "user" else "ASISTEN AI"
             log_teks += f"[{role_label}]:\n{msg['content']}\n\n"
     
-    # Tombol unduh otomatis bawaan Streamlit
     st.sidebar.download_button(
         label="📥 Unduh Riwayat Obrolan (.txt)",
         data=log_teks,
@@ -70,25 +68,20 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     else:
         client = Groq(api_key=GROQ_API_KEY_ANDA)
 
-    # Menampilkan riwayat obrolan di layar utama
     for msg in st.session_state.groq_messages:
         if msg["role"] != "system":
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
 
-    # 🌟 FITUR TAMBAHAN 2: VOICE INPUT / PEREKAM SUARA (AKSESIBILITAS)
     st.markdown("---")
     st.write("🎙️ **Ingin berbicara langsung?** Gunakan alat perekam suara di bawah ini:")
-    
     input_suara = st.audio_input("Rekam suara Anda:") 
     
-    # Variabel penampung teks masukan utama
     prompt_final = ""
 
     if input_suara:
         with st.spinner("Sedang memproses suara Anda..."):
             try:
-                # Mengirim berkas audio langsung ke sistem transkripsi Whisper milik Groq Cloud
                 transkripsi = client.audio.transcriptions.create(
                     model="whisper-large-v3",
                     file=(input_suara.name, input_suara.read()),
@@ -100,15 +93,11 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
             except Exception as audio_err:
                 st.error(f"Gagal memproses suara: {audio_err}")
 
-    # Slot input teks manual standar (Akan aktif jika tidak ada input suara)
     prompt_teks = st.chat_input("Atau ketik pesan Anda secara manual di sini...")
-    
     if prompt_teks:
         prompt_final = prompt_teks
 
-    # Proses pengiriman data obrolan utama ke Groq
     if prompt_final:
-        # Jika pesan terakhir sama dengan yang diinput, stop untuk menghindari looping duplikasi
         if len(st.session_state.groq_messages) > 1 and st.session_state.groq_messages[-1]["content"] == prompt_final:
             st.stop()
             
@@ -145,7 +134,6 @@ else:
             st.image(foto_diunggah, caption="Foto Yang Diunggah", use_container_width=True)
             
         with col2:
-            # 🌟 FITUR TAMBAHAN 3: OCR OPTIMIZATION CHOICE
             st.subheader("💡 Opsi Pengolahan Gambar")
             opsi_tugas = st.selectbox(
                 "Pilih Tindakan Khusus AI:",
@@ -158,7 +146,6 @@ else:
             
             instruksi_tambahan = st.text_input("Tuliskan instruksi tambahan (Opsional):", value="")
             
-            # Formulasi prompt kustom berdasarkan pilihan drop down
             if "OCR Murni" in opsi_tugas:
                 prompt_perintah = "Lakukan OCR tingkat tinggi. Tolong baca gambar ini dan salin ulang setiap baris teks, huruf, angka, atau simbol yang Anda lihat di dalam gambar ini tanpa menambahkan opini atau kesimpulan Anda. Tulis dalam format teks bersih."
             elif "Kuitansi" in opsi_tugas:
@@ -194,21 +181,21 @@ else:
                         }
 
                         response = requests.post(url, headers=headers, json=payload)
+                        response_data = response.json()
                         
                         if response.status_code == 200:
-                            response_data = response.json()
-                            try:
-                                hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
-                                st.success("✨ Hasil Pemrosesan Vision AI:")
-                                st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
-                                
-                                # Menambahkan tombol download instan
-                                st.download_button(
-                                    label="💾 Unduh Hasil Teks Ekstraksi (.txt)",
-                                    data=hasil_ekstraksi,
-                                    file_name=f"hasil_ocr_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-                                    mime="text/plain"
-                                )
-                            except (KeyError, IndexError):
-                                st.error(f"Gagal mengurai respons JSON Google. Data mentah: {response_data}")
+                            hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
+                            st.success("✨ Hasil Pemrosesan Vision AI:")
+                            st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
+                            
+                            st.download_button(
+                                label="💾 Unduh Hasil Teks Ekstraksi (.txt)",
+                                data=hasil_ekstraksi,
+                                file_name=f"hasil_ocr_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                                mime="text/plain"
+                            )
                         else:
+                            st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response_data}")
+                            
+                    except Exception as e:
+                        st.error(f"Terjadi kendala pemrosesan gambar: {e}")
