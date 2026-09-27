@@ -5,7 +5,7 @@ import base64
 from datetime import datetime
 
 # ⚠️ TEMPELKAN KUNCI API ANDA DI BAWAH INI:
-GROQ_API_KEY_ANDA = "gsk_aqqW5UkwJ8EwBJ6xlE6wWGdyb3FY424UbUf3cLa7JuCZkCiDsoi4I"
+GROQ_API_KEY_ANDA = "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"
 GEMINI_API_KEY_ANDA = "AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg"
 
 # Set halaman web agar memiliki tata letak yang bagus dan profesional
@@ -105,7 +105,6 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                 audio_bytes = input_suara.read()
                 audio_id = hash(audio_bytes)
                 
-                # 💡 Pengaman Audio Sisi Kode
                 if st.session_state.last_processed_audio != audio_id and len(audio_bytes) > 100:
                     with st.spinner("🎙️ Menerjemahkan suara via Groq Whisper..."):
                         try:
@@ -172,7 +171,7 @@ else:
             instruksi_tambahan = st.text_input("Tuliskan instruksi tambahan (Opsional):")
             
             if "OCR Murni" in opsi_tugas:
-                prompt_perintah = "Lakukan OCR tingkat tinggi. Tolong baca gambar ini and salin ulang setiap baris teks, huruf, angka, atau simbol yang Anda lihat di dalam gambar ini tanpa menambahkan opini atau kesimpulan Anda. Tulis dalam format teks bersih."
+                prompt_perintah = "Lakukan OCR tingkat tinggi. Tolong baca gambar ini dan salin ulang setiap baris teks, huruf, angka, atau simbol yang Anda lihat di dalam gambar ini tanpa menambahkan opini atau kesimpulan Anda. Tulis dalam format teks bersih."
             elif "Kuitansi" in opsi_tugas:
                 prompt_perintah = "Analisislah gambar kuitansi/faktur ini. Identifikasi dan buatkan rangkuman terstruktur yang mencakup nama toko, tanggal transaksi, daftar barang yang dibeli beserta harga masing-masing, serta total biaya akhir."
             else:
@@ -183,39 +182,40 @@ else:
 
             if st.button("🚀 Ekstrak & Jalankan Vision AI", use_container_width=True):
                 with st.spinner("Mengirimkan file gambar ke server Google Vision API..."):
-                    bytes_foto = foto_diunggah.read()
-                    base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
-                    tipe_konten = foto_diunggah.type
+                    try:
+                        bytes_foto = foto_diunggah.read()
+                        base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
+                        tipe_konten = foto_diunggah.type
 
-                    url = "https://googleapis.com"
-                    
-                    query_params_vision = {
-                        "key": GEMINI_API_KEY_ANDA
-                    }
-                    
-                    headers = {"Content-Type": "application/json"}
-                    
-                    payload = {
-                        "contents": [{
-                            "parts": [
-                                {"text": prompt_perintah},
-                                {
-                                    "inlineData": {
-                                        "mimeType": tipe_konten,
-                                        "data": base64_foto
+                        url = "https://googleapis.com"
+                        
+                        query_params_vision = {
+                            "key": GEMINI_API_KEY_ANDA
+                        }
+                        
+                        headers = {"Content-Type": "application/json"}
+                        
+                        payload = {
+                            "contents": [{
+                                "parts": [
+                                    {"text": prompt_perintah},
+                                    {
+                                        "inlineData": {
+                                            "mimeType": tipe_konten,
+                                            "data": base64_foto
+                                        }
                                     }
-                                }
-                            ]
-                        }]
-                    }
+                                ]
+                            }]
+                        }
 
-                    response = requests.post(url, headers=headers, params=query_params_vision, json=payload)
-                    
-                    if response.status_code == 200:
+                        response = requests.post(url, headers=headers, params=query_params_vision, json=payload)
+                        
+                        # 💡 SOLUSI REMOVE ELSE: Membalikkan logika (jika bukan 200, stop). Jalur sukses berjalan lurus tanpa blok 'else' bertingkat.
+                        if response.status_code != 200:
+                            st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response.text}")
+                            st.stop()
+                        
                         response_data = response.json()
                         hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
                         
-                        st.success("✨ Hasil Pemrosesan Vision AI:")
-                        st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
-                        st.download_button(label="💾 Unduh Hasil Teks Ekstraksi (.txt)", data=hasil_ekstraksi, file_name="hasil_ocr.txt", mime="text/plain")
-                    else:
