@@ -42,7 +42,7 @@ if prompt := st.chat_input("Ketik pesan Anda di sini..."):
     # Mengirim data percakapan ke server Groq
     try:
         respons = client.chat.completions.create(
-            model="llama-3.3-70b-versatile", # Model andalan gratis yang sangat cerdas dan cepat
+            model="openai/gpt-oss-120b", # 💡 FIX UTAMA: Menggunakan pengganti resmi yang super cerdas
             messages=st.session_state.groq_messages
         )
         jawaban_ai = respons.choices.message.content
