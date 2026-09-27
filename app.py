@@ -178,38 +178,36 @@ else:
 
             if st.button("🚀 Ekstrak & Jalankan Vision AI", use_container_width=True):
                 with st.spinner("Mengirimkan file gambar ke server Google Vision API..."):
-                    try:
-                        bytes_foto = foto_diunggah.read()
-                        base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
-                        tipe_konten = foto_diunggah.type
+                    bytes_foto = foto_diunggah.read()
+                    base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
+                    tipe_konten = foto_diunggah.type
 
-                        # 💡 FIX 401 & CONNECTION ERROR: Memanfaatkan lapisan kompatibilitas OpenAI resmi dari Google
-                        # Jalur ini menerima kunci tipe AQ. 100% tanpa kendala otentikasi di server cloud Streamlit
-                        client_gemini = OpenAI(
-                            base_url="https://googleapis.com",
-                            api_key=GEMINI_API_KEY_ANDA
-                        )
-                        
-                        # Menyusun pesan multimodal standar OpenAI yang didukung penuh oleh backend Gemini
-                        response = client_gemini.chat.completions.create(
-                            model="gemini-2.5-flash",
-                            messages=[
-                                {
-                                    "role": "user",
-                                    "content": [
-                                        {"type": "text", "text": prompt_perintah},
-                                        {
-                                            "type": "image_url",
-                                            "image_url": {
-                                                "url": f"data:{tipe_konten};base64,{base64_foto}"
-                                            }
+                    # 💡 SOLUSI FIX UTAMA: Struktur kode linear murni tanpa ada blok 'try' bersarang di Modul 2
+                    client_gemini = OpenAI(
+                        base_url="https://googleapis.com",
+                        api_key=GEMINI_API_KEY_ANDA
+                    )
+                    
+                    response = client_gemini.chat.completions.create(
+                        model="gemini-2.5-flash",
+                        messages=[
+                            {
+                                "role": "user",
+                                "content": [
+                                    {"type": "text", "text": prompt_perintah},
+                                    {
+                                        "type": "image_url",
+                                        "image_url": {
+                                            "url": f"data:{tipe_konten};base64,{base64_foto}"
                                         }
-                                    ]
-                                }
-                            ]
-                        )
-                        
-                        hasil_ekstraksi = response.choices[0].message.content
-                        
-                        st.success("✨ Hasil Pemrosesan Vision AI:")
-                        st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
+                                    }
+                                ]
+                            }
+                        ]
+                    )
+                    
+                    hasil_ekstraksi = response.choices[0].message.content
+                    
+                    st.success("✨ Hasil Pemrosesan Vision AI:")
+                    st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
+                    st.download_button(label="💾 Unduh Hasil Teks Ekstraksi (.txt)", data=hasil_ekstraksi, file_name="hasil_ocr.txt", mime="text/plain")
