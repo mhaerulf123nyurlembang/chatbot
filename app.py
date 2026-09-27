@@ -75,28 +75,42 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
 
     st.markdown("---")
     st.write("🎙️ **Ingin berbicara langsung?** Gunakan alat perekam suara di bawah ini:")
-    input_suara = st.audio_input("Rekam suara Anda:") 
+    
+    # Menangkap objek audio recorder bawaan Streamlit
+    input_suara = st.audio_input("Rekam suara Anda:")
     
     prompt_final = ""
 
+    # 💡 FIX BUG UTAMA: Pemrosesan data biner suara yang divalidasi nama filenya
     if input_suara:
         with st.spinner("Sedang memproses suara Anda..."):
             try:
+                # Membaca data biner audio
+                audio_bytes = input_suara.read()
+                
+                # Memberikan penamaan file virtual dengan ekstensi yang didukung (.wav)
+                nama_file_virtual = "rekaman_suara.wav"
+                if hasattr(input_suara, 'name') and input_suara.name:
+                    nama_file_virtual = input_suara.name if "." in input_suara.name else f"{input_suara.name}.wav"
+
+                # Mengirim berkas biner audio langsung menggunakan tuple terstruktur ke model Whisper
                 transkripsi = client.audio.transcriptions.create(
                     model="whisper-large-v3",
-                    file=(input_suara.name, input_suara.read()),
+                    file=(nama_file_virtual, audio_bytes),
                     response_format="text"
                 )
                 if transkripsi:
                     prompt_final = str(transkripsi).strip()
-                    st.success(f"🗣️ **Hasil Suara Terdeteksi:** \"{prompt_final}\"")
+                    st.info(f"🗣️ **Suara Anda Berhasil Diterjemahkan:** \"{prompt_final}\"")
             except Exception as audio_err:
                 st.error(f"Gagal memproses suara: {audio_err}")
 
+    # Slot input teks manual standar
     prompt_teks = st.chat_input("Atau ketik pesan Anda secara manual di sini...")
     if prompt_teks:
         prompt_final = prompt_teks
 
+    # Eksekusi pengiriman pesan ke model utama
     if prompt_final:
         if len(st.session_state.groq_messages) > 1 and st.session_state.groq_messages[-1]["content"] == prompt_final:
             st.stop()
@@ -107,7 +121,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
 
         try:
             respons = client.chat.completions.create(
-                model="openai/gpt-oss-120b", # 💡 FIX MODEL: Menggunakan model aktif terbaru yang valid di Free Tier
+                model="openai/gpt-oss-120b",
                 messages=st.session_state.groq_messages
             )
             jawaban_ai = respons.choices[0].message.content
@@ -198,4 +212,3 @@ else:
                             st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response_data}")
                             
                     except Exception as e:
-                        st.error(f"Terjadi kendala pemrosesan gambar: {e}")
