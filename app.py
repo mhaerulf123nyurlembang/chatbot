@@ -42,10 +42,12 @@ if prompt := st.chat_input("Ketik pesan Anda di sini..."):
     # Mengirim data percakapan ke server Groq
     try:
         respons = client.chat.completions.create(
-            model="openai/gpt-oss-120b", # 💡 FIX UTAMA: Menggunakan pengganti resmi yang super cerdas
+            model="llama-3.1-8b-instant", # Model gratis, super cepat, dan aktif saat ini
             messages=st.session_state.groq_messages
         )
-        jawaban_ai = respons.choices.message.content
+        
+        # 💡 FIX UTAMA: Menambahkan [0] untuk mengambil elemen pertama dari list choices
+        jawaban_ai = respons.choices[0].message.content
 
         # Tampilkan balasan AI di layar web
         with st.chat_message("assistant"):
