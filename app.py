@@ -216,6 +216,6 @@ if mode_aplikasi == "🖼️ Vision AI & OCR (Gemini)":
                         st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response.text}")
 
 # ==========================================
-# 🎨 MODUL 3: TEXT-TO-IMAGE GENERATOR (OPENAI DALL-E 3)
+# 🖼️ MODUL 3: TEXT-TO-IMAGE GENERATOR (OPENAI DALL-E 3)
 # ==========================================
 if mode_aplikasi == "🎨 Buat Gambar AI (DALL-E 3 / ChatGPT)":
