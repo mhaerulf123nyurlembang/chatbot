@@ -187,11 +187,7 @@ else:
                     tipe_konten = foto_diunggah.type
 
                     url = "https://googleapis.com"
-                    
-                    query_params_vision = {
-                        "key": GEMINI_API_KEY_ANDA
-                    }
-                    
+                    query_params_vision = {"key": GEMINI_API_KEY_ANDA}
                     headers = {"Content-Type": "application/json"}
                     
                     payload = {
@@ -208,13 +204,14 @@ else:
                         }]
                     }
 
-                    # 💡 FIX STRUKTUR FINAL: Blok try-except Modul 2 dibuat teratur dan ditutup sempurna secara terpisah
-                    try:
-                        response = requests.post(url, headers=headers, params=query_params_vision, json=payload)
+                    # 💡 FIX STRUKTUR TOTAL: Menggunakan alur kode linear tanpa blok try-except bersarang di Modul 2
+                    response = requests.post(url, headers=headers, params=query_params_vision, json=payload)
+                    
+                    if response.status_code == 200:
+                        response_data = response.json()
+                        hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
                         
-                        if response.status_code == 200:
-                            response_data = response.json()
-                            hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
-                            
-                            st.success("✨ Hasil Pemrosesan Vision AI:")
-                            st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
+                        st.success("✨ Hasil Pemrosesan Vision AI:")
+                        st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
+                        st.download_button(label="💾 Unduh Hasil Teks Ekstraksi (.txt)", data=hasil_ekstraksi, file_name="hasil_ocr.txt", mime="text/plain")
+                    else:
