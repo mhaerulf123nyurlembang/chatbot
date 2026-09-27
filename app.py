@@ -77,7 +77,6 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     else:
         client = Groq(api_key=GROQ_API_KEY_ANDA)
 
-    # Menampilkan riwayat obrolan di layar utama
     for msg in st.session_state.groq_messages:
         if msg["role"] != "system":
             with st.chat_message(msg["role"]):
@@ -206,7 +205,6 @@ else:
 
                         response = requests.post(url, headers=headers, json=payload)
                         
-                        # 💡 FIX UTAMA: Menyederhanakan penanganan tanpa blok else bertingkat yang rawan error spasi
                         if response.status_code != 200:
                             st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response.text}")
                             st.stop()
@@ -218,3 +216,6 @@ else:
                         st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
                         
                         st.download_button(
+                            label="💾 Unduh Hasil Teks Ekstraksi (.txt)",
+                            data=hasil_ekstraksi,
+                            file_name="hasil_ocr.txt",
