@@ -38,9 +38,13 @@ if prompt := st.chat_input("Ketik pesan Anda di sini..."):
             "parts": [{"text": msg["text"]}]
         })
 
-    # 💡 Perbaikan Endpoint URL: Menyematkan API Key langsung via parameter URL (?key=)
-    # Ini adalah format paling stabil dan diizinkan Google untuk kunci auth bertipe AQ.
-    url = f"https://googleapis.com{GEMINI_API_KEY_ANDA}"
+    # 💡 FIX UTAMA: Alamat URL dibuat bersih tanpa ada variabel yang menempel langsung
+    url = "https://googleapis.com"
+    
+    # Kunci API dikirimkan secara terpisah melalui parameter data, bukan digabung ke teks URL
+    query_params = {
+        "key": GEMINI_API_KEY_ANDA
+    }
     
     headers = {
         "Content-Type": "application/json"
@@ -51,14 +55,13 @@ if prompt := st.chat_input("Ketik pesan Anda di sini..."):
     }
 
     try:
-        # Mengirim data langsung layaknya metode cURL manual ke server Google
-        response = requests.post(url, headers=headers, json=payload)
+        # Mengirim data dengan memisahkan url dan params agar tidak memicu NameResolutionError
+        response = requests.post(url, headers=headers, params=query_params, json=payload)
         
-        # Pengaman Lanjutan: Cek status kode sebelum memproses JSON
         if response.status_code == 200:
             response_data = response.json()
-            # Mengurai struktur JSON dari balasan resmi Google Gemini
             try:
+                # Mengambil teks balasan dari struktur data Google Gemini
                 jawaban_gemini = response_data["candidates"][0]["content"]["parts"][0]["text"]
                 
                 # Tampilkan balasan AI di layar web
@@ -67,11 +70,13 @@ if prompt := st.chat_input("Ketik pesan Anda di sini..."):
                 
                 st.session_state.gemini_messages.append({"role": "assistant", "text": jawaban_gemini})
             except (KeyError, IndexError):
-                st.error(f"Format JSON respons tidak sesuai. Data: {response_data}")
+                st.error(f"Format data respons tidak sesuai. Data: {response_data}")
         else:
-            # Jika Google mengembalikan error teks biasa / HTML
-            st.error(f"Server Google menolak permintaan (Status {response.status_code}).")
-            st.warning("Periksa apakah API Key Anda aktif atau coba buat API Key baru di Google AI Studio.")
+            try:
+                error_msg = response.json().get("error", {}).get("message", "Terjadi kesalahan otentikasi.")
+            except Exception:
+                error_msg = response.text
+            st.error(f"Server Google menolak permintaan (Status {response.status_code}): {error_msg}")
             
     except Exception as e:
         st.error(f"Terjadi kendala koneksi internet: {e}")
