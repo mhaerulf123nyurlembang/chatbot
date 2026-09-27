@@ -18,21 +18,27 @@ else:
 # ==========================================
 # 2. KONFIGURASI SIDEBAR
 # ==========================================
-    # Pilihan Model yang Aktif dan Didukung oleh Groq Terbaru
+with st.sidebar:
+    st.title("⚡ Pengaturan Groq")
+    st.write("Status API: ✅ Terhubung Otomatis" if api_key_env else "❌ API Key Belum Dikonfigurasi")
+    st.markdown("---")
+    
+    # Pilihan Model Terbaru yang Didukung oleh Groq
     st.subheader("1. Pilih Model AI")
     selected_model = st.selectbox(
         "Pilih kecerdasan bot:",
         ["qwen/qwen3.8-27b", "openai/gpt-oss-20b", "openai/gpt-oss-120b"],
         index=0,
-        help="qwen3.8-27b sangat optimal untuk penalaran bahasa & tool use. gpt-oss-20b merupakan model yang sangat cepat."
+        help="qwen3.8-27b sangat optimal untuk penalaran bahasa. gpt-oss-20b merupakan model yang sangat cepat."
     )
     st.markdown("---")
     
-    # Pengaturan Peran / Kepribadian Bot
+    # Pengaturan Peran / Kepribadian Bot (Didefinisikan secara tegas di sini)
     st.subheader("2. Kepribadian Bot")
     system_instruction = st.text_area(
         "Instruksi Khusus (System Prompt):",
-        value="Anda adalah asisten AI yang ramah, sopan, dan membantu menjawab dalam bahasa Indonesia."
+        value="Anda adalah asisten AI yang ramah, sopan, dan membantu menjawab dalam bahasa Indonesia.",
+        help="Tulis instruksi di sini untuk mengatur bagaimana cara bot merespons."
     )
     st.markdown("---")
     
@@ -49,19 +55,17 @@ st.title("⚡ Chatbot AI Super Cepat (Groq)")
 # Menghentikan aplikasi jika API Key benar-benar belum dikonfigurasi di sistem
 if not api_key_env:
     st.error("⚠️ API Key tidak ditemukan! Silakan atur 'GROQ_API_KEY' di menu Secrets Streamlit Cloud atau Terminal komputer Anda.")
-    st.markdown("[👉 Dapatkan API Key Groq Gratis di Sini](https://console.groq.com/keys)")
+    st.markdown("[👉 Dapatkan API Key Groq Gratis di Sini](https://groq.com)")
     st.stop()
 
-# Inisialisasi Riwayat Obrolan di Session State (Menggunakan format pesan OpenAI/Groq)
+# Inisialisasi Riwayat Obrolan di Session State
 if "messages" not in st.session_state:
-    # Memasukkan system prompt sebagai pesan awal di latar belakang jika diisi
     st.session_state.messages = []
 
-# Tampilkan Riwayat Obrolan dari Sesi Sebelumnya (Kecuali instruksi sistem)
+# Tampilkan Riwayat Obrolan dari Sesi Sebelumnya
 for message in st.session_state.messages:
-    if message["role"] != "system":
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
 # Logika Utama saat Pengguna Mengirim Pesan
 if prompt := st.chat_input("Tanya sesuatu kepada AI..."):
@@ -74,8 +78,10 @@ if prompt := st.chat_input("Tanya sesuatu kepada AI..."):
         # Menginisialisasi klien Groq secara resmi
         client = Groq(api_key=api_key_env.strip())
         
-        # Menyusun paket pesan yang dikirim (Instruksi sistem dimasukkan di awal riwayat)
+        # Menyusun paket pesan yang dikirim
         api_messages = []
+        
+        # Masukkan instruksi sistem ke awal riwayat jika diisi
         if system_instruction.strip():
             api_messages.append({"role": "system", "content": system_instruction.strip()})
         
