@@ -80,7 +80,6 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     st.markdown("---")
     st.write("🎙️ **Ingin berbicara langsung?** Gunakan alat perekam suara di bawah ini:")
     
-    # 💡 FIX: Link tautan referensi yang mengganggu di baris ini sudah dihapus total
     input_suara = st.audio_input("Rekam suara Anda:") 
     
     # Variabel penampung teks masukan utama
@@ -122,7 +121,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                 model="llama-3.3-70b-versatile",
                 messages=st.session_state.groq_messages
             )
-            jawaban_ai = respons.choices.message.content
+            jawaban_ai = respons.choices[0].message.content
             with st.chat_message("assistant"):
                 st.write(jawaban_ai)
             st.session_state.groq_messages.append({"role": "assistant", "content": jawaban_ai})
@@ -140,7 +139,7 @@ else:
     foto_diunggah = st.file_uploader("Pilih berkas gambar Anda (Format: JPG, JPEG, PNG):", type=["jpg", "jpeg", "png"])
 
     if foto_diunggah:
-        col1, col2 = st.columns()
+        col1, col2 = st.columns(2)
         
         with col1:
             st.image(foto_diunggah, caption="Foto Yang Diunggah", use_container_width=True)
@@ -198,17 +197,17 @@ else:
                         
                         if response.status_code == 200:
                             response_data = response.json()
-                            hasil_ekstraksi = response_data["candidates"]["content"]["parts"]["text"]
-                            
-                            st.success("✨ Hasil Pemrosesan Vision AI:")
-                            st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
-                            
-                            # Menambahkan tombol download instan khusus untuk teks hasil ekstraksi gambar
-                            st.download_button(
-                                label="💾 Unduh Hasil Teks Ekstraksi (.txt)",
-                                data=hasil_ekstraksi,
-                                file_name=f"hasil_ocr_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-                                mime="text/plain"
-                            )
-                        else:
-                            st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response.text}")
+                            # 💡 FIX BLOK PENUTUP INDEKS STRUKTUR
+                            try:
+                                hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
+                                st.success("✨ Hasil Pemrosesan Vision AI:")
+                                st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
+                                
+                                # Menambahkan tombol download instan
+                                st.download_button(
+                                    label="💾 Unduh Hasil Teks Ekstraksi (.txt)",
+                                    data=hasil_ekstraksi,
+                                    file_name=f"hasil_ocr_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                                    mime="text/plain"
+                                )
+                            except (KeyError, IndexError):
