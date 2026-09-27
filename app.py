@@ -25,7 +25,6 @@ st.markdown("""
 # ==========================================
 st.sidebar.title("⚙️ Panel Kontrol AI")
 
-# Fitur Pilih Mode Utama Aplikasi
 mode_aplikasi = st.sidebar.radio(
     "Pilih Fitur Utama:",
     ["💬 Chat Teks & Suara (Groq)", "🖼️ Vision AI & OCR (Gemini)"]
@@ -38,6 +37,10 @@ if "groq_messages" not in st.session_state:
     st.session_state.groq_messages = [
         {"role": "system", "content": "Anda adalah asisten AI yang sangat cerdas, responsif, ramah, dan membantu."}
     ]
+
+# Inisialisasi pelacak audio agar tidak terjadi double processing / looping bug
+if "last_processed_audio" not in st.session_state:
+    st.session_state.last_processed_audio = None
 
 # FITUR TAMBAHAN 1: EKSPOR CHAT (DOWNLOAD TXT)
 st.sidebar.subheader("💾 Manajemen Data")
@@ -62,6 +65,7 @@ if st.sidebar.button("🗑️ Sapukan / Bersihkan Chat", use_container_width=Tru
     st.session_state.groq_messages = [
         {"role": "system", "content": "Anda adalah asisten AI yang sangat cerdas, responsif, ramah, dan membantu."}
     ]
+    st.session_state.last_processed_audio = None
     st.rerun()
 
 # ==========================================
@@ -77,6 +81,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     else:
         client = Groq(api_key=GROQ_API_KEY_ANDA)
 
+    # Menampilkan riwayat obrolan di layar utama
     for msg in st.session_state.groq_messages:
         if msg["role"] != "system":
             with st.chat_message(msg["role"]):
@@ -95,31 +100,48 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                 prompt_final = prompt_teks
 
         with col_suara:
-            input_suara = st.audio_input("Klik untuk rekam suara:", label_visibility="collapsed")
-            if input_suara:
-                with st.spinner("🎙️ Menerjemahkan suara..."):
-                    try:
-                        audio_bytes = input_suara.read()
-                        nama_file_virtual = "rekaman_suara.wav"
-                        if hasattr(input_suara, 'name') and input_suara.name:
-                            nama_file_virtual = input_suara.name if "." in input_suara.name else f"{input_suara.name}.wav"
-
-                        transkripsi = client.audio.transcriptions.create(
-                            model="whisper-large-v3",
-                            file=(nama_file_virtual, audio_bytes),
-                            response_format="text"
-                        )
-                        if transkripsi:
-                            prompt_final = str(transkripsi).strip()
-                            st.info(f"🗣️ Terdeteksi: \"{prompt_final}\"")
-                    except Exception as audio_err:
-                        st.error(f"Gagal memproses suara: {audio_err}")
-
-    # Eksekusi pengiriman pesan ke model utama
-    if prompt_final:
-        if len(st.session_state.groq_messages) > 1 and st.session_state.groq_messages[-1]["content"] == prompt_final:
-            st.stop()
+            # 💡 FIX VOICE BUG: Menambahkan 'key' khusus agar status widget terkunci dengan aman
+            input_suara = st.audio_input("Klik untuk rekam suara:", label_visibility="collapsed", key="uploader_suara_unik")
             
+            if input_suara:
+                # Mengambil ID file atau nilai biner unik untuk mendeteksi apakah ini audio baru atau lama
+                audio_bytes = input_suara.read()
+                audio_id = hash(audio_bytes)
+                
+                # Hanya jalankan transkripsi jika audio ini belum pernah diproses sebelumnya
+                if st.session_state.last_processed_audio != audio_id:
+                    with st.spinner("🎙️ Menerjemahkan suara via Gemini..."):
+                        try:
+                            base64_audio = base64.b64encode(audio_bytes).decode('utf-8')
+                            url = f"https://googleapis.com{GEMINI_API_KEY_ANDA}"
+                            headers = {"Content-Type": "application/json"}
+                            payload = {
+                                "contents": [{
+                                    "parts": [
+                                        {"text": "Tolong dengarkan rekaman audio ini dengan seksama dan tulis ulang ucapan/kata-kata di dalamnya menjadi teks bersih (transkripsi bahasa Indonesia murni) tanpa tambahan penjelasan dari Anda."},
+                                        {
+                                            "inlineData": {
+                                                "mimeType": "audio/wav",
+                                                "data": base64_audio
+                                            }
+                                        }
+                                    ]
+                                }]
+                            }
+                            
+                            response = requests.post(url, headers=headers, json=payload)
+                            if response.status_code == 200:
+                                response_data = response.json()
+                                prompt_final = response_data["candidates"]["content"]["parts"]["text"].strip()
+                                # Kunci ID audio ini agar tidak diproses ulang saat rerun berikutnya
+                                st.session_state.last_processed_audio = audio_id
+                            else:
+                                st.error(f"Gagal memproses audio (Status {response.status_code})")
+                        except Exception as audio_err:
+                            st.error(f"Kendala audio: {audio_err}")
+
+    # Eksekusi pengiriman pesan ke model utama (Groq Llama)
+    if prompt_final:
         with st.chat_message("user"):
             st.write(prompt_final)
         st.session_state.groq_messages.append({"role": "user", "content": prompt_final})
@@ -131,7 +153,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                     messages=st.session_state.groq_messages
                 )
                 
-                jawaban_ai = respons.choices[0].message.content
+                jawaban_ai = respons.choices.message.content
                 
                 with st.chat_message("assistant"):
                     st.write(jawaban_ai)
@@ -186,31 +208,3 @@ else:
                     tipe_konten = foto_diunggah.type
 
                     url = f"https://googleapis.com{GEMINI_API_KEY_ANDA}"
-                    headers = {"Content-Type": "application/json"}
-                    
-                    payload = {
-                        "contents": [{
-                            "parts": [
-                                {"text": prompt_perintah},
-                                {
-                                    "inlineData": {
-                                        "mimeType": tipe_konten,
-                                        "data": base64_foto
-                                    }
-                                }
-                            ]
-                        }]
-                    }
-
-                    response = requests.post(url, headers=headers, json=payload)
-                    
-                    # 💡 FIX STRUKTUR UTAMA: Menghilangkan try-except bercabang demi keamanan spasi 100%
-                    if response.status_code == 200:
-                        response_data = response.json()
-                        hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
-                        
-                        st.success("✨ Hasil Pemrosesan Vision AI:")
-                        st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
-                        st.download_button(label="💾 Unduh Hasil Teks Ekstraksi (.txt)", data=hasil_ekstraksi, file_name="hasil_ocr.txt", mime="text/plain")
-                    else:
-                        st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response.text}")
