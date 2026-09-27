@@ -179,43 +179,43 @@ else:
 
             if st.button("🚀 Ekstrak & Jalankan Vision AI", use_container_width=True):
                 with st.spinner("Mengirimkan file gambar ke server Google Vision API..."):
-                    try:
-                        bytes_foto = foto_diunggah.read()
-                        base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
-                        tipe_konten = foto_diunggah.type
+                    bytes_foto = foto_diunggah.read()
+                    base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
+                    tipe_konten = foto_diunggah.type
 
-                        # 💡 FIX CONNECTION & AUTH ERROR: Menggunakan urllib3 bawaan Python untuk menembus REST API pusat Google secara aman
-                        http = urllib3.PoolManager()
-                        
-                        url = f"https://googleapis.com{GEMINI_API_KEY_ANDA}"
-                        
-                        payload = {
-                            "contents": [{
-                                "parts": [
-                                    {"text": prompt_perintah},
-                                    {
-                                        "inlineData": {
-                                            "mimeType": tipe_konten,
-                                            "data": base64_foto
-                                        }
+                    # 💡 SOLUSI LINEAR TOTAL: Menggunakan urllib3 murni tanpa ada blok 'try' bersarang di Modul 2
+                    http = urllib3.PoolManager()
+                    url = f"https://googleapis.com{GEMINI_API_KEY_ANDA}"
+                    
+                    payload = {
+                        "contents": [{
+                            "parts": [
+                                {"text": prompt_perintah},
+                                {
+                                    "inlineData": {
+                                        "mimeType": tipe_konten,
+                                        "data": base64_foto
                                     }
-                                ]
-                            }]
-                        }
+                                }
+                            ]
+                        }]
+                    }
+                    
+                    encoded_data = json.dumps(payload).encode('utf-8')
+                    
+                    response = http.request(
+                        'POST',
+                        url,
+                        body=encoded_data,
+                        headers={'Content-Type': 'application/json'}
+                    )
+                    
+                    if response.status == 200:
+                        response_data = json.loads(response.data.decode('utf-8'))
+                        hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
                         
-                        encoded_data = json.dumps(payload).encode('utf-8')
-                        
-                        # Eksekusi request HTTP POST murni
-                        response = http.request(
-                            'POST',
-                            url,
-                            body=encoded_data,
-                            headers={'Content-Type': 'application/json'}
-                        )
-                        
-                        if response.status == 200:
-                            response_data = json.loads(response.data.decode('utf-8'))
-                            hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
-                            
-                            st.success("✨ Hasil Pemrosesan Vision AI:")
-                            st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
+                        st.success("✨ Hasil Pemrosesan Vision AI:")
+                        st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
+                        st.download_button(label="💾 Unduh Hasil Teks Ekstraksi (.txt)", data=hasil_ekstraksi, file_name="hasil_ocr.txt", mime="text/plain")
+                    else:
+                        st.error(f"Server Google menolak permintaan (Status {response.status}): {response.data.decode('utf-8')}")
