@@ -204,9 +204,9 @@ else:
                         }]
                     }
 
-                    # 💡 FIX STRUKTUR TOTAL: Menggunakan alur kode linear tanpa blok try-except bersarang di Modul 2
                     response = requests.post(url, headers=headers, params=query_params_vision, json=payload)
                     
+                    # 💡 FIX INDENTASI FINAL: Menyeimbangkan jarak tab pada if-else penutup respons API Google
                     if response.status_code == 200:
                         response_data = response.json()
                         hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
@@ -215,3 +215,4 @@ else:
                         st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
                         st.download_button(label="💾 Unduh Hasil Teks Ekstraksi (.txt)", data=hasil_ekstraksi, file_name="hasil_ocr.txt", mime="text/plain")
                     else:
+                        st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response.text}")
