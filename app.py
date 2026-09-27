@@ -18,19 +18,16 @@ else:
 # ==========================================
 # 2. KONFIGURASI SIDEBAR
 # ==========================================
-with st.sidebar:
-    st.title("⚡ Pengaturan Groq")
-    st.write("Status API: ✅ Terhubung Otomatis" if api_key_env else "❌ API Key Belum Dikonfigurasi")
-    st.markdown("---")
-    
-    # Pilihan Model Populer di Groq (Llama 3 dan Mixtral)
+    # Pilihan Model yang Aktif dan Didukung oleh Groq Terbaru
     st.subheader("1. Pilih Model AI")
     selected_model = st.selectbox(
         "Pilih kecerdasan bot:",
-        ["llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768"],
+        ["qwen/qwen3.8-27b", "openai/gpt-oss-20b", "openai/gpt-oss-120b"],
         index=0,
-        help="Llama3-8b sangat cepat. Llama3-70b lebih cerdas untuk penalaran mendalam."
+        help="qwen3.8-27b sangat optimal untuk penalaran bahasa & tool use. gpt-oss-20b merupakan model yang sangat cepat."
     )
+    st.markdown("---")
+
     st.markdown("---")
     
     # Pengaturan Peran / Kepribadian Bot
