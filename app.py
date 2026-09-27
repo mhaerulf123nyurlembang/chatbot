@@ -2,7 +2,7 @@ import streamlit as st
 from google import genai
 
 # ⚠️ TEMPELKAN API KEY GEMINI ANDA LANGSUNG DI BAWAH INI:
-GEMINI_API_KEY_ANDA = "AIzaSy..." 
+GEMINI_API_KEY_ANDA = "AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg" 
 
 # Inisialisasi Klien Google GenAI secara langsung
 if GEMINI_API_KEY_ANDA == "AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg" or not GEMINI_API_KEY_ANDA:
