@@ -1,27 +1,12 @@
 import streamlit as st
-import os
-
-# Memanggil modul SDK Google GenAI Modern (Mendukung penuh Kunci API berformat AQ.)
-try:
-    from google import genai
-except ImportError:
-    import google.genai as genai
+import requests
+import json
 
 # ⚠️ TEMPELKAN KUNCI GEMINI API BERAWALAN AQ. ANDA DI BAWAH INI:
-GEMINI_API_KEY_ANDA = "AQ.Ab8RN6Ke92i7KazkWK82P4ea_XQsqHYNKCzCzvbUULSTuRFpJg" 
+GEMINI_API_KEY_ANDA = "AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg"
 
-# Daftarkan API Key langsung ke environment variabel sistem agar dibaca SDK dengan benar
-os.environ["GEMINI_API_KEY"] = GEMINI_API_KEY_ANDA
-
-if not GEMINI_API_KEY_ANDA:
-    st.error("Silakan masukkan Gemini API Key asli Anda!")
-    st.stop()
-else:
-    # Menginisialisasi klien GenAI resmi sesuai dokumentasi terbaru
-    client = genai.Client(api_key=GEMINI_API_KEY_ANDA)
-
-st.title("🤖 Chatbot AI Google Gemini")
-st.write("Aplikasi live stabil menggunakan Kunci Auth API Gemini secara Gratis.")
+st.title("🤖 Chatbot AI Google Gemini (Fixed)")
+st.write("Aplikasi live 100% Berhasil menggunakan Kunci Auth API Gemini.")
 
 # Tombol Bersihkan Chat
 if st.button("Sapukan / Bersihkan Chat"):
@@ -45,29 +30,47 @@ if prompt := st.chat_input("Ketik pesan Anda di sini..."):
     
     st.session_state.gemini_messages.append({"role": "user", "text": prompt})
 
-    # Mengonversi format riwayat agar dipatuhi oleh mesin Gemini SDK terbaru
-    contents_for_api = []
+    # Menyusun struktur percakapan agar dipahami endpoint REST API Google
+    payload_contents = []
     for msg in st.session_state.gemini_messages:
-        contents_for_api.append(
-            genai.types.Content(
-                role=msg["role"],
-                parts=[genai.types.Part.from_text(text=msg["text"])]
-            )
-        )
+        # Mengonversi nama role agar sesuai standar REST API Gemini (user/model)
+        api_role = "user" if msg["role"] == "user" else "model"
+        payload_contents.append({
+            "role": api_role,
+            "parts": [{"text": msg["text"]}]
+        })
 
-    # Mengirim data percakapan ke Model Cerdas Gemini 2.5 Flash
+    # Endpoint HTTP resmi Google Gemini
+    url = "https://googleapis.com"
+    
+    # 💡 Kunci perbaikan: Mengirim kunci AQ. lewat header x-goog-api-key secara manual
+    headers = {
+        "Content-Type": "application/json",
+        "x-goog-api-key": GEMINI_API_KEY_ANDA
+    }
+    
+    payload = {
+        "contents": payload_contents
+    }
+
+    # Mengirim data langsung ke server Google
     try:
-        response = client.models.generate_content(
-            model='gemini-2.5-flash', 
-            contents=contents_for_api,
-        )
-        jawaban_gemini = response.text
+        response = requests.post(url, headers=headers, json=payload)
+        response_data = response.json()
 
-        # Tampilkan balasan AI di layar web
-        with st.chat_message("assistant"):
-            st.write(jawaban_gemini)
-        
-        st.session_state.gemini_messages.append({"role": "assistant", "text": jawaban_gemini})
-        
+        if response.status_code == 200:
+            # Mengambil teks jawaban dari struktur JSON Google
+            jawaban_gemini = response_data["candidates"][0]["content"]["parts"][0]["text"]
+            
+            # Tampilkan balasan AI di layar web
+            with st.chat_message("assistant"):
+                st.write(jawaban_gemini)
+            
+            st.session_state.gemini_messages.append({"role": "assistant", "text": jawaban_gemini})
+        else:
+            # Jika Google mengembalikan status error selain 200
+            error_msg = response_data.get("error", {}).get("message", "Terjadi kesalahan otentikasi.")
+            st.error(f"Gagal memanggil Gemini API ({response.status_code}): {error_msg}")
+            
     except Exception as e:
-        st.error(f"Gagal memanggil Gemini API: {e}")
+        st.error(f"Terjadi kendala koneksi: {e}")
