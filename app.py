@@ -5,8 +5,10 @@ import base64
 from datetime import datetime
 
 # ⚠️ TEMPELKAN KUNCI API ANDA DI BAWAH INI:
-GROQ_API_KEY_ANDA = "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"
-GEMINI_API_KEY_ANDA = "AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg"
+# Ganti baris penulisan API key mentah Anda dengan kode aman ini:
+GROQ_API_KEY_ANDA = st.secrets["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"]
+GEMINI_API_KEY_ANDA = st.secrets["AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg"]
+
 
 # Set halaman web agar memiliki tata letak yang bagus dan profesional
 st.set_page_config(page_title="AI Multi-Fungsi Platform", layout="wide", page_icon="🤖")
