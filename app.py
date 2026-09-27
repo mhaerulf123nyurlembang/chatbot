@@ -77,10 +77,33 @@ if prompt := st.chat_input("Tanya sesuatu kepada AI..."):
     try:
         # Menginisialisasi klien menggunakan kunci yang tersimpan otomatis
        # Memaksa SDK agar menonaktifkan VertexAI dan mengenali format kunci AQ. sebagai API Key murni
-client = genai.Client(
-    api_key=api_key_env.strip(),
-    http_options={'headers': {'x-goog-api-key': api_key_env.strip()}}
-)
+    # Kirim ke Google Gemini API dengan konfigurasi dari sidebar
+    try:
+        # PERBAIKAN: Pastikan semua baris di bawah 'try' ini menjorok masuk 4 spasi
+        client = genai.Client(
+            api_key=api_key_env.strip(),
+            http_options={'headers': {'x-goog-api-key': api_key_env.strip()}}
+        )
+        
+        with st.chat_message("assistant"):
+            config_params = {}
+            if system_instruction.strip():
+                config_params["system_instruction"] = system_instruction.strip()
+
+            # Menggunakan stream agar teks muncul mengetik secara real-time
+            response_stream = client.models.generate_content_stream(
+                model=selected_model,
+                contents=prompt,
+                config=types.GenerateContentConfig(**config_params) if config_params else None
+            )
+            response_text = st.write_stream(response_stream)
+            
+        # Simpan respons AI ke riwayat
+        st.session_state.messages.append({"role": "assistant", "content": response_text})
+
+    except Exception as e:
+        st.error(f"Terjadi kesalahan pada API: {e}")
+
 
         
         with st.chat_message("assistant"):
