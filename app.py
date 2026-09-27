@@ -1,225 +1,65 @@
-import streamlit as st 
+import streamlit as st
 from groq import Groq
-from openai import OpenAI
-import requests
-import base64
-from datetime import datetime
 
-# 💡 HACKTIV8 BEST PRACTICES: Mengambil API Key dari brankas rahasia (Secrets) Streamlit Cloud
+# 💡 HACKTIV8 BEST PRACTICES: Membaca API Key dari brankas Secrets Streamlit Cloud
 try:
     GROQ_API_KEY_ANDA = st.secrets["GROQ_API_KEY"]
-    GEMINI_API_KEY_ANDA = st.secrets["GEMINI_API_KEY"]
-    OPENAI_API_KEY_ANDA = st.secrets["OPENAI_API_KEY"]
 except Exception:
-    st.error("Gagal membaca API Key! Pastikan Anda sudah mengisi menu Secrets di Streamlit Cloud dengan benar untuk GROQ, GEMINI, dan OPENAI.")
+    st.error("Gagal membaca API Key! Pastikan Anda sudah mengisi menu Secrets di Streamlit Cloud dengan label 'GROQ_API_KEY'.")
     st.stop()
 
-# Set halaman web agar memiliki tata letak yang bagus dan profesional
-st.set_page_config(page_title="AI Multi-Fungsi Platform", layout="wide", page_icon="🤖")
+# Set halaman web agar memiliki tata letak yang bagus
+st.set_page_config(page_title="Chatbot AI Groq", layout="centered", page_icon="🤖")
 
-# Custom CSS untuk memosisikan input area agar selalu berada di bawah layar ala ChatGPT
-st.markdown("""
-    <style>
-    .stChatInputContainer {
-        padding-bottom: 20px;
-    }
-    </style>
-""", unsafe_allow_html=True)
+st.title("🤖 Chatbot AI Super Cepat")
+st.write("Aplikasi chatbot live menggunakan infrastruktur LPU Groq Cloud.")
 
-# ==========================================
-# 📊 KONFIGURASI SIDEBAR (PANEL KONTROL)
-# ==========================================
-st.sidebar.title("⚙️ Panel Kontrol AI")
-
-mode_aplikasi = st.sidebar.radio(
-    "Pilih Fitur Utama:",
-    [
-        "💬 Chat Teks & Suara (Groq)", 
-        "🖼️ Vision AI & OCR (Gemini)",
-        "🎨 Buat Gambar AI (DALL-E 3 / ChatGPT)"
+# Tombol Bersihkan Chat
+if st.button("🗑️ Bersihkan Riwayat Chat"):
+    st.session_state.groq_messages = [
+        {"role": "system", "content": "Anda adalah asisten AI yang sangat cerdas, responsif, ramah, dan membantu."}
     ]
-)
+    st.rerun()
 
-st.sidebar.markdown("---")
-
-# Menginisialisasi session state untuk riwayat chat teks
+# Menginisialisasi riwayat obrolan internal (Mengikuti standar OpenAI/Groq)
 if "groq_messages" not in st.session_state:
     st.session_state.groq_messages = [
         {"role": "system", "content": "Anda adalah asisten AI yang sangat cerdas, responsif, ramah, dan membantu."}
     ]
 
-# Inisialisasi pelacak audio agar tidak terjadi double processing / looping bug
-if "last_processed_audio" not in st.session_state:
-    st.session_state.last_processed_audio = None
+# Menampilkan riwayat obrolan di layar web
+for msg in st.session_state.groq_messages:
+    if msg["role"] != "system":
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
 
-# FITUR TAMBAHAN 1: EKSPOR CHAT (DOWNLOAD TXT)
-if mode_aplikasi == "💬 Chat Teks & Suara (Groq)" and len(st.session_state.groq_messages) > 1:
-    st.sidebar.subheader("💾 Manajemen Data")
-    log_teks = f"RIWAYAT OBROLAN CHATBOT\n"
-    log_teks += "="*50 + "\n\n"
-    for msg in st.session_state.groq_messages:
-        if msg["role"] != "system":
-            role_label = "PENGGUNA" if msg["role"] == "user" else "ASISTEN AI"
-            log_teks += f"[{role_label}]:\n{msg['content']}\n\n"
+# Menerima ketikan pesan baru dari pengguna
+if prompt := st.chat_input("Ketik pesan Anda di sini..."):
+    # Tampilkan pesan user ke layar secara instan
+    with st.chat_message("user"):
+        st.write(prompt)
     
-    st.sidebar.download_button(
-        label="📥 Unduh Riwayat Obrolan (.txt)",
-        data=log_teks,
-        file_name="riwayat_chat.txt",
-        mime="text/plain",
-        use_container_width=True
-    )
+    st.session_state.groq_messages.append({"role": "user", "content": prompt})
 
-# Tombol bersihkan chat
-if st.sidebar.button("🗑️ Sapukan / Bersihkan Chat", use_container_width=True):
-    st.session_state.groq_messages = [
-        {"role": "system", "content": "Anda adalah asisten AI yang sangat cerdas, responsif, ramah, and membantu."}
-    ]
-    st.session_state.last_processed_audio = None
-    st.rerun()
-
-
-# ==========================================
-# ⚡ EKSEKUSI PENYALURAN MODUL APLIKASI
-# ==========================================
-
-# 🤖 MODUL 1: CHAT TEKS & SUARA (GROQ)
-if "Chat Teks" in mode_aplikasi:
-    st.title("⚡ Chatbot AI Super Cepat (Powered by Groq)")
-    st.write("Aplikasi live dengan fitur input teks dan transkripsi suara.")
-
-    client = Groq(api_key=GROQ_API_KEY_ANDA)
-
-    for msg in st.session_state.groq_messages:
-        if msg["role"] != "system":
-            with st.chat_message(msg["role"]):
-                st.write(msg["content"])
-
-    input_container = st.container()
-    prompt_final = ""
-
-    with input_container:
-        col_teks, col_suara = st.columns([6, 2], gap="small")
+    # Mengirim data ke server Groq menggunakan model gratis aktif terbaru
+    try:
+        client = Groq(api_key=GROQ_API_KEY_ANDA)
         
-        with col_teks:
-            prompt_teks = st.chat_input("Ketik pesan Anda di sini...")
-            if prompt_teks:
-                prompt_final = prompt_teks
-
-        with col_suara:
-            input_suara = st.audio_input("Klik untuk rekam suara:", label_visibility="collapsed", key="uploader_suara_unik")
-            if input_suara:
-                audio_bytes = input_suara.read()
-                audio_id = hash(audio_bytes)
-                
-                if st.session_state.last_processed_audio != audio_id and len(audio_bytes) > 100:
-                    with st.spinner("🎙️ Menerjemahkan suara via Groq Whisper..."):
-                        try:
-                            transkripsi = client.audio.transcriptions.create(
-                                model="whisper-large-v3",
-                                file=("rekaman_asli.wav", audio_bytes, "audio/wav"),
-                                response_format="verbose_json"
-                            )
-                            prompt_final = transkripsi.text.strip()
-                            st.session_state.last_processed_audio = audio_id
-                            st.info(f"🗣️ Terdeteksi: \"{prompt_final}\"")
-                        except Exception as audio_err:
-                            st.error(f"Gagal memproses audio lewat Whisper: {audio_err}")
-
-    if prompt_final:
-        if len(st.session_state.groq_messages) > 1 and st.session_state.groq_messages[-1]["content"] == prompt_final:
-            st.stop()
-            
-        with st.chat_message("user"):
-            st.write(prompt_final)
-        st.session_state.groq_messages.append({"role": "user", "content": prompt_final})
-
-        try:
-            with st.spinner("AI sedang berpikir..."):
-                respons = client.chat.completions.create(
-                    model="openai/gpt-oss-120b",
-                    messages=st.session_state.groq_messages
-                )
-                jawaban_ai = respons.choices[0].message.content
-                
-                with st.chat_message("assistant"):
-                    st.write(jawaban_ai)
-                st.session_state.groq_messages.append({"role": "assistant", "content": jawaban_ai})
-                st.rerun()
-        except Exception as e:
-            st.error(f"Gagal memanggil Groq API: {e}")
-
-# 🖼️ MODUL 2: VISION AI & OCR EKSTRAKTOR (GEMINI)
-elif "Vision AI" in mode_aplikasi:
-    st.title("🖼️ Vision AI & OCR Ekstraktor Dokumen")
-    st.write("Unggah foto kuitansi, tulisan tangan, atau gambar apa saja untuk diekstrak teksnya.")
-
-    foto_diunggah = st.file_uploader("Pilih berkas gambar Anda (Format: JPG, JPEG, PNG):", type=["jpg", "jpeg", "png"])
-
-    if foto_diunggah:
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.image(foto_diunggah, caption="Foto Yang Diunggah", use_container_width=True)
-            
-        with col2:
-            st.subheader("💡 Opsi Pengolahan Gambar")
-            opsi_tugas = st.selectbox(
-                "Pilih Tindakan Khusus AI:",
-                [
-                    "📝 OCR Murni: Ekstrak semua teks di dalam gambar kata demi kata",
-                    "🔍 Analisis Gambar Secara Umum & Detail",
-                    "📊 Pahami & Rangkum data Kuitansi / Faktur belanja"
-                ]
+        with st.spinner("AI sedang berpikir..."):
+            respons = client.chat.completions.create(
+                model="llama-3.3-70b-versatile", 
+                messages=st.session_state.groq_messages
             )
             
-            instruksi_tambahan = st.text_input("Tuliskan instruksi tambahan (Opsional):")
-            
-            if "OCR Murni" in opsi_tugas:
-                prompt_perintah = "Lakukan OCR tingkat tinggi. Tolong baca gambar ini dan salin ulang setiap baris teks, huruf, angka, atau simbol yang Anda lihat di dalam gambar ini tanpa menambahkan opini atau kesimpulan Anda. Tulis dalam format teks bersih."
-            elif "Kuitansi" in opsi_tugas:
-                prompt_perintah = "Analisislah gambar kuitansi/faktur ini. Identifikasi dan buatkan rangkuman terstruktur yang mencakup nama toko, tanggal transaksi, daftar barang yang dibeli beserta harga masing-masing, serta total biaya akhir."
-            else:
-                prompt_perintah = "Analisislah gambar ini secara mendalam dan deskripsikan objek-objek penting di dalamnya secara detail."
-                
-            if instruksi_tambahan:
-                prompt_perintah += f" Catatan tambahan dari pengguna: {instruksi_tambahan}"
+            # 💡 FIX UTAMA: Menambahkan indeks [0] untuk mengambil elemen pertama dari list choices
+            jawaban_ai = respons.choices[0].message.content
 
-            if st.button("🚀 Ekstrak & Jalankan Vision AI", use_container_width=True):
-                with st.spinner("Mengirimkan file gambar ke server Google Vision API..."):
-                    bytes_foto = foto_diunggah.read()
-                    base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
-                    tipe_konten = foto_diunggah.type
-
-                    url = f"https://googleapis.com{GEMINI_API_KEY_ANDA}"
-                    headers = {"Content-Type": "application/json"}
-                    
-                    payload = {
-                        "contents": [{
-                            "parts": [
-                                {"text": prompt_perintah},
-                                {"inlineData": {"mimeType": tipe_konten, "data": base64_foto}}
-                            ]
-                        }]
-                    }
-
-                    response = requests.post(url, headers=headers, json=payload)
-                    
-                    if response.status_code == 200:
-                        response_data = response.json()
-                        hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
-                        
-                        st.success("✨ Hasil Pemrosesan Vision AI:")
-                        st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
-                        st.download_button(label="💾 Unduh Hasil Teks Ekstraksi (.txt)", data=hasil_ekstraksi, file_name="hasil_ocr.txt", mime="text/plain")
-                    else:
-                        st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response.text}")
-
-# 🎨 MODUL 3: TEXT-TO-IMAGE GENERATOR (OPENAI DALL-E 3)
-elif "Buat Gambar" in mode_aplikasi:
-    st.title("🎨 AI Image Generator (Powered by DALL-E 3 / ChatGPT)")
-    st.write("Ubah ide pikiran Anda menjadi karya seni gambar digital beresolusi tinggi secara instan.")
-
-    client_openai = OpenAI(api_key=OPENAI_API_KEY_ANDA)
-
-    deskripsi_gambar = st.text_area(
+        # Tampilkan balasan AI di layar web
+        with st.chat_message("assistant"):
+            st.write(jawaban_ai)
+        
+        st.session_state.groq_messages.append({"role": "assistant", "content": jawaban_ai})
+        st.rerun()
+        
+    except Exception as e:
+        st.error(f"Gagal memanggil Groq API: {e}")
