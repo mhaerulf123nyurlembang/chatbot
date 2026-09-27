@@ -107,7 +107,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
 
         try:
             respons = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model="openai/gpt-oss-120b", # 💡 FIX MODEL: Menggunakan model aktif terbaru yang valid di Free Tier
                 messages=st.session_state.groq_messages
             )
             jawaban_ai = respons.choices[0].message.content
