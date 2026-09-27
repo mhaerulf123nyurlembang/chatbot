@@ -1,4 +1,4 @@
-import streamlit as st  # 💡 FIX: Menambahkan kata 'as' yang sempat tertinggal
+import streamlit as st 
 from groq import Groq
 
 # ⚠️ TEMPELKAN KUNCI GROQ API ANDA (Wajib Diawali gsk_) DI BAWAH INI:
@@ -42,11 +42,11 @@ if prompt := st.chat_input("Ketik pesan Anda di sini..."):
     # Mengirim data percakapan ke server Groq
     try:
         respons = client.chat.completions.create(
-            model="llama-3.3-70b-versatile", 
+            model="openai/gpt-oss-120b", # 💡 FIX MODEL: Menggunakan model pengganti resmi yang aktif saat ini
             messages=st.session_state.groq_messages
         )
         
-        # Mengambil balasan teks dari list choices objek pertama
+        # Mengambil balasan teks dari list choices objek pertama secara presisi
         jawaban_ai = respons.choices[0].message.content
 
         # Tampilkan balasan AI di layar web
