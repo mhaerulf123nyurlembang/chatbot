@@ -186,10 +186,8 @@ else:
                     base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
                     tipe_konten = foto_diunggah.type
 
-                    # 💡 FIX URL VISION: Menggunakan format endpoint REST resmi Google yang akurat
-                    url = "https://googleapis.com"
-                    
-                    query_params_vision = {"key": GEMINI_API_KEY_ANDA}
+                    # 💡 SOLUSI FIX 404: Menggabungkan kunci langsung ke string URL endpoint agar rute cloud tidak pecah
+                    url = f"https://googleapis.com{GEMINI_API_KEY_ANDA}"
                     headers = {"Content-Type": "application/json"}
                     
                     payload = {
@@ -206,7 +204,8 @@ else:
                         }]
                     }
 
-                    response = requests.post(url, headers=headers, params=query_params_vision, json=payload)
+                    # Eksekusi request langsung menembak URL yang sudah membawa API Key bawaan
+                    response = requests.post(url, headers=headers, json=payload)
                     
                     if response.status_code == 200:
                         response_data = response.json()
