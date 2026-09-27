@@ -1,8 +1,8 @@
 import streamlit as st 
 from groq import Groq
-from openai import OpenAI
+import urllib3
+import json
 import base64
-from datetime import datetime
 
 # 💡 HACKTIV8 BEST PRACTICES: Mengambil API Key dari brankas rahasia (Secrets) Streamlit Cloud
 try:
@@ -49,7 +49,7 @@ if "last_processed_audio" not in st.session_state:
 # FITUR TAMBAHAN 1: EKSPOR CHAT (DOWNLOAD TXT)
 st.sidebar.subheader("💾 Manajemen Data")
 if len(st.session_state.groq_messages) > 1:
-    log_teks = f"RIWAYAT OBROLAN CHATBOT - Dibuat pada {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+    log_teks = f"RIWAYAT OBROLAN CHATBOT\n"
     log_teks += "="*50 + "\n\n"
     for msg in st.session_state.groq_messages:
         if msg["role"] != "system":
@@ -59,7 +59,7 @@ if len(st.session_state.groq_messages) > 1:
     st.sidebar.download_button(
         label="📥 Unduh Riwayat Obrolan (.txt)",
         data=log_teks,
-        file_name=f"riwayat_chat_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+        file_name="riwayat_chat.txt",
         mime="text/plain",
         use_container_width=True
     )
@@ -77,7 +77,7 @@ if st.sidebar.button("🗑️ Sapukan / Bersihkan Chat", use_container_width=Tru
 # ==========================================
 if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     st.title("⚡ Chatbot AI Super Cepat (Powered by Groq)")
-    st.write("Aplikasi live dengan fitur input teks dan transkripsi suara yang menyatu di bagian bawah.")
+    st.write("Aplikasi live dengan fitur input teks dan transkripsi suara.")
 
     client = Groq(api_key=GROQ_API_KEY_ANDA)
 
@@ -86,6 +86,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
 
+    # Container Kolom untuk Menyatukan Input Teks & Perekam Suara
     input_container = st.container()
     prompt_final = ""
 
@@ -143,7 +144,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
 # ==========================================
 else:
     st.title("🖼️ Vision AI & OCR Ekstraktor Dokumen")
-    st.write("Unggah foto kuitansi, tulisan tangan, atau gambar apa saja untuk dianalisis dan diekstrak teksnya.")
+    st.write("Unggah foto kuitansi, tulisan tangan, atau gambar apa saja untuk diekstrak teksnya.")
 
     foto_diunggah = st.file_uploader("Pilih berkas gambar Anda (Format: JPG, JPEG, PNG):", type=["jpg", "jpeg", "png"])
 
@@ -178,36 +179,43 @@ else:
 
             if st.button("🚀 Ekstrak & Jalankan Vision AI", use_container_width=True):
                 with st.spinner("Mengirimkan file gambar ke server Google Vision API..."):
-                    bytes_foto = foto_diunggah.read()
-                    base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
-                    tipe_konten = foto_diunggah.type
+                    try:
+                        bytes_foto = foto_diunggah.read()
+                        base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
+                        tipe_konten = foto_diunggah.type
 
-                    # 💡 SOLUSI FIX UTAMA: Struktur kode linear murni tanpa ada blok 'try' bersarang di Modul 2
-                    client_gemini = OpenAI(
-                        base_url="https://googleapis.com",
-                        api_key=GEMINI_API_KEY_ANDA
-                    )
-                    
-                    response = client_gemini.chat.completions.create(
-                        model="gemini-2.5-flash",
-                        messages=[
-                            {
-                                "role": "user",
-                                "content": [
-                                    {"type": "text", "text": prompt_perintah},
+                        # 💡 FIX CONNECTION & AUTH ERROR: Menggunakan urllib3 bawaan Python untuk menembus REST API pusat Google secara aman
+                        http = urllib3.PoolManager()
+                        
+                        url = f"https://googleapis.com{GEMINI_API_KEY_ANDA}"
+                        
+                        payload = {
+                            "contents": [{
+                                "parts": [
+                                    {"text": prompt_perintah},
                                     {
-                                        "type": "image_url",
-                                        "image_url": {
-                                            "url": f"data:{tipe_konten};base64,{base64_foto}"
+                                        "inlineData": {
+                                            "mimeType": tipe_konten,
+                                            "data": base64_foto
                                         }
                                     }
                                 ]
-                            }
-                        ]
-                    )
-                    
-                    hasil_ekstraksi = response.choices[0].message.content
-                    
-                    st.success("✨ Hasil Pemrosesan Vision AI:")
-                    st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
-                    st.download_button(label="💾 Unduh Hasil Teks Ekstraksi (.txt)", data=hasil_ekstraksi, file_name="hasil_ocr.txt", mime="text/plain")
+                            }]
+                        }
+                        
+                        encoded_data = json.dumps(payload).encode('utf-8')
+                        
+                        # Eksekusi request HTTP POST murni
+                        response = http.request(
+                            'POST',
+                            url,
+                            body=encoded_data,
+                            headers={'Content-Type': 'application/json'}
+                        )
+                        
+                        if response.status == 200:
+                            response_data = json.loads(response.data.decode('utf-8'))
+                            hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
+                            
+                            st.success("✨ Hasil Pemrosesan Vision AI:")
+                            st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
