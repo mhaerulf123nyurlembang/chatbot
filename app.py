@@ -4,14 +4,9 @@ import requests
 import base64
 from datetime import datetime
 
-# ⚠️ TEMPELKAN KUNCI API ANDA DI BAWAH INI:
-# Ganti baris penulisan API key mentah Anda dengan kode aman ini:
-# 💡 PERBAIKAN: Di dalam kodeapp.py, CUKUP tulis nama labelnya seperti ini:
-# 💡 FIX MUTLAK: Tulis nama label penunjuknya saja, JANGAN tulis kode gsk_ atau AQ. di sini!
+# 💡 PERBAIKAN ACADEMY: Membaca API Key dari brankas rahasia secara aman (Bebas dari KeyError)
 GROQ_API_KEY_ANDA = st.secrets["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"]
 GEMINI_API_KEY_ANDA = st.secrets["AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg"]
-
-
 
 # Set halaman web agar memiliki tata letak yang bagus dan profesional
 st.set_page_config(page_title="AI Multi-Fungsi Platform", layout="wide", page_icon="🤖")
@@ -80,11 +75,8 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     st.title("⚡ Chatbot AI Super Cepat (Powered by Groq)")
     st.write("Aplikasi live dengan fitur input teks dan transkripsi suara yang menyatu di bagian bawah.")
 
-    if GROQ_API_KEY_ANDA == "gsk_TEMPELKAN_KUNCI_GROQ_ASLI_DI_SINI" or not GROQ_API_KEY_ANDA:
-        st.error("Silakan ganti kunci Groq API asli Anda di kode GitHub!")
-        st.stop()
-    else:
-        client = Groq(api_key=GROQ_API_KEY_ANDA)
+    # Memuat Groq Client menggunakan variabel aman
+    client = Groq(api_key=GROQ_API_KEY_ANDA)
 
     for msg in st.session_state.groq_messages:
         if msg["role"] != "system":
@@ -211,7 +203,6 @@ else:
 
                     response = requests.post(url, headers=headers, params=query_params_vision, json=payload)
                     
-                    # 💡 FIX INDENTASI FINAL: Menyeimbangkan jarak tab pada if-else penutup respons API Google
                     if response.status_code == 200:
                         response_data = response.json()
                         hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
