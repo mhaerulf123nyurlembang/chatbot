@@ -31,7 +31,6 @@ st.markdown("""
 # ==========================================
 st.sidebar.title("⚙️ Panel Kontrol AI")
 
-# Menambahkan Modul Baru ke-3 untuk Generate Gambar
 mode_aplikasi = st.sidebar.radio(
     "Pilih Fitur Utama:",
     [
@@ -98,8 +97,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     prompt_final = ""
 
     with input_container:
-        # 💡 FIX 1: Menentukan rasio angka kolom secara presisi [5, 1] agar tidak memicu blank crash
-        col_teks, col_suara = st.columns([5, 1], gap="small")
+        col_teks, col_suara = st.columns([6, 2], gap="small")
         
         with col_teks:
             prompt_teks = st.chat_input("Ketik pesan Anda di sini...")
@@ -108,7 +106,6 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
 
         with col_suara:
             input_suara = st.audio_input("Klik untuk rekam suara:", label_visibility="collapsed", key="uploader_suara_unik")
-            
             if input_suara:
                 audio_bytes = input_suara.read()
                 audio_id = hash(audio_bytes)
@@ -128,6 +125,9 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                             st.error(f"Gagal memproses audio lewat Whisper: {audio_err}")
 
     if prompt_final:
+        if len(st.session_state.groq_messages) > 1 and st.session_state.groq_messages[-1]["content"] == prompt_final:
+            st.stop()
+            
         with st.chat_message("user"):
             st.write(prompt_final)
         st.session_state.groq_messages.append({"role": "user", "content": prompt_final})
@@ -150,7 +150,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
 # ==========================================
 # 🖼️ MODUL 2: VISION AI & OCR EKSTRAKTOR (GEMINI)
 # ==========================================
-elif mode_aplikasi == "🖼️ Vision AI & OCR (Gemini)":
+if mode_aplikasi == "🖼️ Vision AI & OCR (Gemini)":
     st.title("🖼️ Vision AI & OCR Ekstraktor Dokumen")
     st.write("Unggah foto kuitansi, tulisan tangan, atau gambar apa saja untuk diekstrak teksnya.")
 
@@ -218,4 +218,4 @@ elif mode_aplikasi == "🖼️ Vision AI & OCR (Gemini)":
 # ==========================================
 # 🎨 MODUL 3: TEXT-TO-IMAGE GENERATOR (OPENAI DALL-E 3)
 # ==========================================
-else:
+if mode_aplikasi == "🎨 Buat Gambar AI (DALL-E 3 / ChatGPT)":
