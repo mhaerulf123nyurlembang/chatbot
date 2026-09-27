@@ -81,6 +81,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     else:
         client = Groq(api_key=GROQ_API_KEY_ANDA)
 
+    # Menampilkan riwayat obrolan di layar utama
     for msg in st.session_state.groq_messages:
         if msg["role"] != "system":
             with st.chat_message(msg["role"]):
@@ -105,43 +106,24 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                 audio_bytes = input_suara.read()
                 audio_id = hash(audio_bytes)
                 
+                # Mengamankan agar audio hanya ditranskripsi tepat satu kali
                 if st.session_state.last_processed_audio != audio_id:
-                    with st.spinner("🎙️ Menerjemahkan suara via Gemini..."):
+                    with st.spinner("🎙️ Menerjemahkan suara via Groq Whisper..."):
                         try:
-                            base64_audio = base64.b64encode(audio_bytes).decode('utf-8')
+                            # 💡 SOLUSI FIX UTAMA: Membungkus bytes audio ke dalam format file virtual yang valid
+                            # Menghindari error pembacaan tipe data kosong di sisi server Groq Cloud
+                            transkripsi = client.audio.transcriptions.create(
+                                model="whisper-large-v3",
+                                file=("rekaman_asli.wav", audio_bytes, "audio/wav"),
+                                response_format="verbose_json"
+                            )
                             
-                            # 💡 FIX URL AUDIO: Menyisipkan rute v1beta secara utuh ke dalam endpoint resmi Google
-                            url_audio = "https://googleapis.com"
-                            
-                            query_params = {
-                                "key": GEMINI_API_KEY_ANDA
-                            }
-                            
-                            headers = {"Content-Type": "application/json"}
-                            payload = {
-                                "contents": [{
-                                    "parts": [
-                                        {"text": "Tolong dengarkan rekaman audio ini dengan seksama dan tulis ulang ucapan/kata-kata di dalamnya menjadi teks bersih (transkripsi bahasa Indonesia murni) tanpa tambahan penjelasan dari Anda."},
-                                        {
-                                            "inlineData": {
-                                                "mimeType": "audio/wav",
-                                                "data": base64_audio
-                                            }
-                                        }
-                                    ]
-                                }]
-                            }
-                            
-                            response = requests.post(url_audio, headers=headers, params=query_params, json=payload)
-                            
-                            if response.status_code == 200:
-                                response_data = response.json()
-                                prompt_final = response_data["candidates"][0]["content"]["parts"][0]["text"].strip()
-                                st.session_state.last_processed_audio = audio_id
-                            else:
-                                st.error(f"Gagal memproses audio (Status {response.status_code}): {response.text}")
+                            # Mengambil hasil konversi teks dari server Groq
+                            prompt_final = transkripsi.text.strip()
+                            st.session_state.last_processed_audio = audio_id
+                            st.info(f"🗣️ Terdeteksi: \"{prompt_final}\"")
                         except Exception as audio_err:
-                            st.error(f"Kendala audio: {audio_err}")
+                            st.error(f"Gagal memproses audio lewat Whisper: {audio_err}")
 
     # Eksekusi pengiriman pesan ke model utama (Groq Llama)
     if prompt_final:
@@ -215,3 +197,27 @@ else:
                     query_params_vision = {
                         "key": GEMINI_API_KEY_ANDA
                     }
+                    
+                    headers = {"Content-Type": "application/json"}
+                    
+                    payload = {
+                        "contents": [{
+                            "parts": [
+                                {"text": prompt_perintah},
+                                {
+                                    "inlineData": {
+                                        "mimeType": tipe_konten,
+                                        "data": base64_foto
+                                    }
+                                }
+                            ]
+                        }]
+                    }
+
+                    response = requests.post(url, headers=headers, params=query_params_vision, json=payload)
+                    
+                    if response.status_code == 200:
+                        response_data = response.json()
+                        hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
+                        
+                        st.success("✨ Hasil Pemrosesan Vision AI:")
