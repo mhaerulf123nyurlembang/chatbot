@@ -27,8 +27,6 @@ else:
         help="qwen3.8-27b sangat optimal untuk penalaran bahasa & tool use. gpt-oss-20b merupakan model yang sangat cepat."
     )
     st.markdown("---")
-
-    st.markdown("---")
     
     # Pengaturan Peran / Kepribadian Bot
     st.subheader("2. Kepribadian Bot")
