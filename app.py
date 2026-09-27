@@ -181,38 +181,36 @@ else:
 
             if st.button("🚀 Ekstrak & Jalankan Vision AI", use_container_width=True):
                 with st.spinner("Mengirimkan file gambar ke server Google Vision API..."):
-                    try:
-                        bytes_foto = foto_diunggah.read()
-                        base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
-                        tipe_konten = foto_diunggah.type
+                    bytes_foto = foto_diunggah.read()
+                    base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
+                    tipe_konten = foto_diunggah.type
 
-                        url = f"https://googleapis.com{GEMINI_API_KEY_ANDA}"
-                        headers = {"Content-Type": "application/json"}
-                        
-                        payload = {
-                            "contents": [{
-                                "parts": [
-                                    {"text": prompt_perintah},
-                                    {
-                                        "inlineData": {
-                                            "mimeType": tipe_konten,
-                                            "data": base64_foto
-                                        }
+                    url = f"https://googleapis.com{GEMINI_API_KEY_ANDA}"
+                    headers = {"Content-Type": "application/json"}
+                    
+                    payload = {
+                        "contents": [{
+                            "parts": [
+                                {"text": prompt_perintah},
+                                {
+                                    "inlineData": {
+                                        "mimeType": tipe_konten,
+                                        "data": base64_foto
                                     }
-                                ]
-                            }]
-                        }
+                                }
+                            ]
+                        }]
+                    }
 
-                        response = requests.post(url, headers=headers, json=payload)
+                    response = requests.post(url, headers=headers, json=payload)
+                    
+                    # 💡 FIX STRUKTUR UTAMA: Menghilangkan try-except bercabang demi keamanan spasi 100%
+                    if response.status_code == 200:
+                        response_data = response.json()
+                        hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
                         
-                        if response.status_code != 200:
-                            st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response.text}")
-                        else:
-                            response_data = response.json()
-                            hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
-                            
-                            st.success("✨ Hasil Pemrosesan Vision AI:")
-                            st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
-                            st.download_button(label="💾 Unduh Hasil Teks Ekstraksi (.txt)", data=hasil_ekstraksi, file_name="hasil_ocr.txt", mime="text/plain")
-                            
-                    except Exception as e:
+                        st.success("✨ Hasil Pemrosesan Vision AI:")
+                        st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
+                        st.download_button(label="💾 Unduh Hasil Teks Ekstraksi (.txt)", data=hasil_ekstraksi, file_name="hasil_ocr.txt", mime="text/plain")
+                    else:
+                        st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response.text}")
