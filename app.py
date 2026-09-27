@@ -1,8 +1,15 @@
 import streamlit as st 
 from groq import Groq
-import requests
-import base64
+import os
 from datetime import datetime
+
+# 💡 PERBAIKAN NETWORKING: Mengimpor pustaka resmi Google GenAI untuk koneksi cloud yang stabil
+try:
+    from google import genai
+    from google.genai import types
+except ImportError:
+    import google.genai as genai
+    from google.genai import types
 
 # 💡 HACKTIV8 BEST PRACTICES: Mengambil API Key dari brankas rahasia (Secrets) Streamlit Cloud
 try:
@@ -182,37 +189,30 @@ else:
 
             if st.button("🚀 Ekstrak & Jalankan Vision AI", use_container_width=True):
                 with st.spinner("Mengirimkan file gambar ke server Google Vision API..."):
-                    bytes_foto = foto_diunggah.read()
-                    base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
-                    tipe_konten = foto_diunggah.type
+                    try:
+                        bytes_foto = foto_diunggah.read()
+                        tipe_konten = foto_diunggah.type
 
-                    # 💡 SOLUSI FIX 404: Menggabungkan kunci langsung ke string URL endpoint agar rute cloud tidak pecah
-                    url = f"https://googleapis.com{GEMINI_API_KEY_ANDA}"
-                    headers = {"Content-Type": "application/json"}
-                    
-                    payload = {
-                        "contents": [{
-                            "parts": [
-                                {"text": prompt_perintah},
-                                {
-                                    "inlineData": {
-                                        "mimeType": tipe_konten,
-                                        "data": base64_foto
-                                    }
-                                }
+                        # 💡 FIX CONNECTION ERROR: Menggunakan klien SDK resmi untuk membuka terowongan gRPC aman
+                        client_gemini = genai.Client(api_key=GEMINI_API_KEY_ANDA)
+                        
+                        # Memanggil fungsi multimodal resmi dari modul google-genai
+                        response = client_gemini.models.generate_content(
+                            model='gemini-2.5-flash',
+                            contents=[
+                                prompt_perintah,
+                                types.Part.from_bytes(
+                                    data=bytes_foto,
+                                    mime_type=tipe_konten,
+                                )
                             ]
-                        }]
-                    }
-
-                    # Eksekusi request langsung menembak URL yang sudah membawa API Key bawaan
-                    response = requests.post(url, headers=headers, json=payload)
-                    
-                    if response.status_code == 200:
-                        response_data = response.json()
-                        hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
+                        )
+                        
+                        hasil_ekstraksi = response.text
                         
                         st.success("✨ Hasil Pemrosesan Vision AI:")
                         st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
                         st.download_button(label="💾 Unduh Hasil Teks Ekstraksi (.txt)", data=hasil_ekstraksi, file_name="hasil_ocr.txt", mime="text/plain")
-                    else:
-                        st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response.text}")
+                            
+                    except Exception as e:
+                        st.error(f"Terjadi kendala pemrosesan gambar via SDK: {e}")
