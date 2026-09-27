@@ -1,58 +1,73 @@
 import streamlit as st
-import google.generativeai as genai
+import os
 
-# ⚠️ KODE API KEY GEMINI ANDA SUDAH TERPASANG DI SINI:
-GEMINI_API_KEY_ANDA = "AQ.Ab8RN6Ke92i7KazkWK82P4ea_XQsqHYNKCzCzvbUULSTuRFpJg" 
+# Memanggil modul SDK Google GenAI Modern (Mendukung penuh Kunci API berformat AQ.)
+try:
+    from google import genai
+except ImportError:
+    import google.genai as genai
 
-# Inisialisasi API Key secara langsung tanpa pengecekan teks manual
+# ⚠️ TEMPELKAN KUNCI GEMINI API BERAWALAN AQ. ANDA DI BAWAH INI:
+GEMINI_API_KEY_ANDA = "AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg" 
+
+# Daftarkan API Key langsung ke environment variabel sistem agar dibaca SDK dengan benar
+os.environ["GEMINI_API_KEY"] = GEMINI_API_KEY_ANDA
+
 if not GEMINI_API_KEY_ANDA:
-    st.error("Masukkan Gemini API Key asli Anda!")
+    st.error("Silakan masukkan Gemini API Key asli Anda!")
     st.stop()
 else:
-    genai.configure(api_key=GEMINI_API_KEY_ANDA)
-
+    # Menginisialisasi klien GenAI resmi sesuai dokumentasi terbaru
+    client = genai.Client(api_key=GEMINI_API_KEY_ANDA)
 
 st.title("🤖 Chatbot AI Google Gemini")
-st.write("Aplikasi live stabil menggunakan Gemini API secara Gratis.")
+st.write("Aplikasi live stabil menggunakan Kunci Auth API Gemini secara Gratis.")
 
 # Tombol Bersihkan Chat
 if st.button("Sapukan / Bersihkan Chat"):
-    st.session_state.chat_history = []
+    st.session_state.gemini_messages = []
     st.rerun()
 
-# Menginisialisasi riwayat obrolan dalam format bawaan model Gemini
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
+# Menginisialisasi riwayat obrolan internal
+if "gemini_messages" not in st.session_state:
+    st.session_state.gemini_messages = []
 
-# Menampilkan riwayat pesan ke layar halaman web
-for msg in st.session_state.chat_history:
-    # Mengonversi nama role agar sesuai ikon standar Streamlit
-    display_role = "user" if msg.role == "user" else "assistant"
-    with st.chat_message(display_role):
-        st.write(msg.parts[0].text)
+# Menampilkan riwayat obrolan di halaman web
+for msg in st.session_state.gemini_messages:
+    with st.chat_message(msg["role"]):
+        st.write(msg["text"])
 
-# Menerima ketikan input dari pengguna
+# Menerima ketikan pesan baru dari pengguna
 if prompt := st.chat_input("Ketik pesan Anda di sini..."):
-    # Tampilkan pesan user secara instan di layar
+    # Tampilkan pesan user ke layar secara instan
     with st.chat_message("user"):
         st.write(prompt)
     
+    st.session_state.gemini_messages.append({"role": "user", "text": prompt})
+
+    # Mengonversi format riwayat agar dipatuhi oleh mesin Gemini SDK terbaru
+    contents_for_api = []
+    for msg in st.session_state.gemini_messages:
+        contents_for_api.append(
+            genai.types.Content(
+                role=msg["role"],
+                parts=[genai.types.Part.from_text(text=msg["text"])]
+            )
+        )
+
+    # Mengirim data percakapan ke Model Cerdas Gemini 2.5 Flash
     try:
-        # Memanggil mesin model Gemini 1.5 Flash yang sangat stabil
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        # Memulai atau melanjutkan sesi chat dengan menyertakan riwayat lama
-        chat_session = model.start_chat(history=st.session_state.chat_history)
-        
-        # Mengirim pesan baru ke Google server
-        response = chat_session.send_message(prompt)
-        
-        # Tampilkan jawaban AI ke layar
+        response = client.models.generate_content(
+            model='gemini-2.5-flash', 
+            contents=contents_for_api,
+        )
+        jawaban_gemini = response.text
+
+        # Tampilkan balasan AI di layar web
         with st.chat_message("assistant"):
-            st.write(response.text)
-            
-        # Simpan otomatis riwayat obrolan terbaru ke session state
-        st.session_state.chat_history = chat_session.history
+            st.write(jawaban_gemini)
+        
+        st.session_state.gemini_messages.append({"role": "assistant", "text": jawaban_gemini})
         
     except Exception as e:
         st.error(f"Gagal memanggil Gemini API: {e}")
