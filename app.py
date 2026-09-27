@@ -75,25 +75,18 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
 
     st.markdown("---")
     st.write("🎙️ **Ingin berbicara langsung?** Gunakan alat perekam suara di bawah ini:")
-    
-    # Menangkap objek audio recorder bawaan Streamlit
     input_suara = st.audio_input("Rekam suara Anda:")
     
     prompt_final = ""
 
-    # 💡 FIX BUG UTAMA: Pemrosesan data biner suara yang divalidasi nama filenya
     if input_suara:
         with st.spinner("Sedang memproses suara Anda..."):
             try:
-                # Membaca data biner audio
                 audio_bytes = input_suara.read()
-                
-                # Memberikan penamaan file virtual dengan ekstensi yang didukung (.wav)
                 nama_file_virtual = "rekaman_suara.wav"
                 if hasattr(input_suara, 'name') and input_suara.name:
                     nama_file_virtual = input_suara.name if "." in input_suara.name else f"{input_suara.name}.wav"
 
-                # Mengirim berkas biner audio langsung menggunakan tuple terstruktur ke model Whisper
                 transkripsi = client.audio.transcriptions.create(
                     model="whisper-large-v3",
                     file=(nama_file_virtual, audio_bytes),
@@ -105,12 +98,10 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
             except Exception as audio_err:
                 st.error(f"Gagal memproses suara: {audio_err}")
 
-    # Slot input teks manual standar
     prompt_teks = st.chat_input("Atau ketik pesan Anda secara manual di sini...")
     if prompt_teks:
         prompt_final = prompt_teks
 
-    # Eksekusi pengiriman pesan ke model utama
     if prompt_final:
         if len(st.session_state.groq_messages) > 1 and st.session_state.groq_messages[-1]["content"] == prompt_final:
             st.stop()
@@ -124,7 +115,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                 model="openai/gpt-oss-120b",
                 messages=st.session_state.groq_messages
             )
-            jawaban_ai = respons.choices[0].message.content
+            jawaban_ai = respons.choices.message.content
             with st.chat_message("assistant"):
                 st.write(jawaban_ai)
             st.session_state.groq_messages.append({"role": "assistant", "content": jawaban_ai})
@@ -198,7 +189,7 @@ else:
                         response_data = response.json()
                         
                         if response.status_code == 200:
-                            hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
+                            hasil_ekstraksi = response_data["candidates"]["content"]["parts"]["text"]
                             st.success("✨ Hasil Pemrosesan Vision AI:")
                             st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
                             
@@ -212,3 +203,4 @@ else:
                             st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response_data}")
                             
                     except Exception as e:
+                        st.error(f"Terjadi kendala pemrosesan gambar: {e}")
