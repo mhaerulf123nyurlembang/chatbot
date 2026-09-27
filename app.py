@@ -213,9 +213,7 @@ else:
                         hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
                         
                         st.success("✨ Hasil Pemrosesan Vision AI:")
+                        
+                        # 💡 FIX UTAMA: Menulis st.text_area secara padat baris tunggal agar kurung tertutup sempurna
                         st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
                         
-                        st.download_button(
-                            label="💾 Unduh Hasil Teks Ekstraksi (.txt)",
-                            data=hasil_ekstraksi,
-                            file_name="hasil_ocr.txt",
