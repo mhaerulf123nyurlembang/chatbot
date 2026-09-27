@@ -7,8 +7,10 @@ from datetime import datetime
 # ⚠️ TEMPELKAN KUNCI API ANDA DI BAWAH INI:
 # Ganti baris penulisan API key mentah Anda dengan kode aman ini:
 # 💡 PERBAIKAN: Di dalam kodeapp.py, CUKUP tulis nama labelnya seperti ini:
-GROQ_API_KEY_ANDA = st.secrets"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"
-GEMINI_API_KEY_ANDA = st.secrets"AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg"
+# 💡 FIX MUTLAK: Tulis nama label penunjuknya saja, JANGAN tulis kode gsk_ atau AQ. di sini!
+GROQ_API_KEY_ANDA = st.secrets["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"]
+GEMINI_API_KEY_ANDA = st.secrets["AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg"]
+
 
 
 # Set halaman web agar memiliki tata letak yang bagus dan profesional
