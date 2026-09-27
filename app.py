@@ -8,7 +8,7 @@ except ImportError:
     import google.genai as genai
 
 # ⚠️ TEMPELKAN KUNCI GEMINI API BERAWALAN AQ. ANDA DI BAWAH INI:
-GEMINI_API_KEY_ANDA = "AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg" 
+GEMINI_API_KEY_ANDA = "AQ.Ab8RN6Ke92i7KazkWK82P4ea_XQsqHYNKCzCzvbUULSTuRFpJg" 
 
 # Daftarkan API Key langsung ke environment variabel sistem agar dibaca SDK dengan benar
 os.environ["GEMINI_API_KEY"] = GEMINI_API_KEY_ANDA
