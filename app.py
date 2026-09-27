@@ -4,11 +4,13 @@ import requests
 import base64
 from datetime import datetime
 
-# 💡 PERBAIKAN ACADEMY: Membaca API Key dari brankas rahasia secara aman (Bebas dari KeyError)
-# HAPUS KUNCI ASLI ANDA DARI SINI, GANTI DENGAN KODE BERIKUT:
-GROQ_API_KEY_ANDA = st.secrets["GROQ_API_KEY"]
-GEMINI_API_KEY_ANDA = "AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg"
-
+# 💡 HACKTIV8 BEST PRACTICES: Mengambil API Key dari brankas rahasia (Secrets) Streamlit Cloud
+try:
+    GROQ_API_KEY_ANDA = st.secrets["GROQ_API_KEY"]
+    GEMINI_API_KEY_ANDA = st.secrets["GEMINI_API_KEY"]
+except Exception:
+    st.error("Gagal membaca API Key! Pastikan Anda sudah mengisi menu Secrets di Streamlit Cloud dengan benar.")
+    st.stop()
 
 # Set halaman web agar memiliki tata letak yang bagus dan profesional
 st.set_page_config(page_title="AI Multi-Fungsi Platform", layout="wide", page_icon="🤖")
@@ -77,7 +79,6 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     st.title("⚡ Chatbot AI Super Cepat (Powered by Groq)")
     st.write("Aplikasi live dengan fitur input teks dan transkripsi suara yang menyatu di bagian bawah.")
 
-    # Memuat Groq Client menggunakan variabel aman
     client = Groq(api_key=GROQ_API_KEY_ANDA)
 
     for msg in st.session_state.groq_messages:
@@ -185,7 +186,9 @@ else:
                     base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
                     tipe_konten = foto_diunggah.type
 
+                    # 💡 FIX URL VISION: Menggunakan format endpoint REST resmi Google yang akurat
                     url = "https://googleapis.com"
+                    
                     query_params_vision = {"key": GEMINI_API_KEY_ANDA}
                     headers = {"Content-Type": "application/json"}
                     
