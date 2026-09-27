@@ -79,7 +79,9 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     # 🌟 FITUR TAMBAHAN 2: VOICE INPUT / PEREKAM SUARA (AKSESIBILITAS)
     st.markdown("---")
     st.write("🎙️ **Ingin berbicara langsung?** Gunakan alat perekam suara di bawah ini:")
-    input_suara = st.audio_input("Rekam suara Anda:") [https://streamlit.io]
+    
+    # 💡 FIX: Link tautan referensi yang mengganggu di baris ini sudah dihapus total
+    input_suara = st.audio_input("Rekam suara Anda:") 
     
     # Variabel penampung teks masukan utama
     prompt_final = ""
@@ -97,7 +99,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                     prompt_final = str(transkripsi).strip()
                     st.success(f"🗣️ **Hasil Suara Terdeteksi:** \"{prompt_final}\"")
             except Exception as audio_err:
-                st.error(f"Gagal memproses suara (Pastikan saldo kuota API mencukupi): {audio_err}")
+                st.error(f"Gagal memproses suara: {audio_err}")
 
     # Slot input teks manual standar (Akan aktif jika tidak ada input suara)
     prompt_teks = st.chat_input("Atau ketik pesan Anda secara manual di sini...")
@@ -120,7 +122,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                 model="llama-3.3-70b-versatile",
                 messages=st.session_state.groq_messages
             )
-            jawaban_ai = respons.choices[0].message.content
+            jawaban_ai = respons.choices.message.content
             with st.chat_message("assistant"):
                 st.write(jawaban_ai)
             st.session_state.groq_messages.append({"role": "assistant", "content": jawaban_ai})
@@ -138,7 +140,7 @@ else:
     foto_diunggah = st.file_uploader("Pilih berkas gambar Anda (Format: JPG, JPEG, PNG):", type=["jpg", "jpeg", "png"])
 
     if foto_diunggah:
-        col1, col2 = st.columns([1, 1])
+        col1, col2 = st.columns()
         
         with col1:
             st.image(foto_diunggah, caption="Foto Yang Diunggah", use_container_width=True)
@@ -196,7 +198,7 @@ else:
                         
                         if response.status_code == 200:
                             response_data = response.json()
-                            hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
+                            hasil_ekstraksi = response_data["candidates"]["content"]["parts"]["text"]
                             
                             st.success("✨ Hasil Pemrosesan Vision AI:")
                             st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
@@ -209,3 +211,4 @@ else:
                                 mime="text/plain"
                             )
                         else:
+                            st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response.text}")
