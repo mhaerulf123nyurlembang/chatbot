@@ -37,8 +37,12 @@ if prompt := st.chat_input("Ketik pesan Anda di sini..."):
             "parts": [{"text": msg["text"]}]
         })
 
-    # 💡 Perbaikan: Menggunakan endpoint v1beta resmi untuk model gemini-2.5-flash
-    url = f"https://googleapis.com{GEMINI_API_KEY_ANDA}"
+    # 💡 FIX URL: Alamat web dipisah secara sempurna dari API Key Anda menggunakan parameter resmi (?key=)
+    url = "https://googleapis.com"
+    
+    params = {
+        "key": GEMINI_API_KEY_ANDA
+    }
     
     headers = {
         "Content-Type": "application/json"
@@ -49,8 +53,8 @@ if prompt := st.chat_input("Ketik pesan Anda di sini..."):
     }
 
     try:
-        # Mengirim data langsung ke server Google
-        response = requests.post(url, headers=headers, json=payload)
+        # Mengirim data langsung ke server Google dengan memisahkan params URL
+        response = requests.post(url, headers=headers, params=params, json=payload)
         
         # Pengaman: Cek jika respons bukan JSON
         try:
