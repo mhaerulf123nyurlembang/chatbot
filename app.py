@@ -98,7 +98,8 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     prompt_final = ""
 
     with input_container:
-        col_teks, col_suara = st.columns([6, 2], gap="small")
+        # 💡 FIX 1: Menentukan rasio angka kolom secara presisi [5, 1] agar tidak memicu blank crash
+        col_teks, col_suara = st.columns([5, 1], gap="small")
         
         with col_teks:
             prompt_teks = st.chat_input("Ketik pesan Anda di sini...")
@@ -218,4 +219,3 @@ elif mode_aplikasi == "🖼️ Vision AI & OCR (Gemini)":
 # 🎨 MODUL 3: TEXT-TO-IMAGE GENERATOR (OPENAI DALL-E 3)
 # ==========================================
 else:
-    st.title("🎨 AI Image Generator (Powered by DALL-E 3 / ChatGPT)")
