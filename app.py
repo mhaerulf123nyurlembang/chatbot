@@ -205,17 +205,16 @@ else:
                         }
 
                         response = requests.post(url, headers=headers, json=payload)
-                        response_data = response.json()
                         
-                        if response.status_code == 200:
-                            hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
-                            st.success("✨ Hasil Pemrosesan Vision AI:")
-                            st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
+                        # 💡 FIX UTAMA: Menyederhanakan penanganan tanpa blok else bertingkat yang rawan error spasi
+                        if response.status_code != 200:
+                            st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response.text}")
+                            st.stop()
                             
-                            st.download_button(
-                                label="💾 Unduh Hasil Teks Ekstraksi (.txt)",
-                                data=hasil_ekstraksi,
-                                file_name="hasil_ocr.txt",
-                                mime="text/plain"
-                            )
-                        else:
+                        response_data = response.json()
+                        hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
+                        
+                        st.success("✨ Hasil Pemrosesan Vision AI:")
+                        st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
+                        
+                        st.download_button(
