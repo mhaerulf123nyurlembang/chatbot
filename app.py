@@ -2,7 +2,7 @@ import streamlit as st
 from groq import Groq
 
 # ⚠️ TEMPELKAN KUNCI GROQ API ANDA (Diawali dengan gsk_) DI BAWAH INI:
-GROQ_API_KEY_ANDA = "gsk_TEMPELKAN_KUNCI_GROQ_ASLI_DI_SINI"
+GROQ_API_KEY_ANDA = "xai-UKXTYwJABTjrOR41Hq7a6btdTVKVCwg1w1tRhImlO2uIe5c3Q27DitHApLKEU5IUZ5BILnQX4NdsXVG2"
 
 st.title("⚡ Chatbot AI Super Cepat (Powered by Groq)")
 st.write("Aplikasi live stabil menggunakan Groq API Key secara gratis.")
