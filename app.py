@@ -76,7 +76,12 @@ if prompt := st.chat_input("Tanya sesuatu kepada AI..."):
     # Kirim ke Google Gemini API dengan konfigurasi dari sidebar
     try:
         # Menginisialisasi klien menggunakan kunci yang tersimpan otomatis
-        client = genai.Client(api_key=api_key_env.strip())
+       # Memaksa SDK agar menonaktifkan VertexAI dan mengenali format kunci AQ. sebagai API Key murni
+client = genai.Client(
+    api_key=api_key_env.strip(),
+    http_options={'headers': {'x-goog-api-key': api_key_env.strip()}}
+)
+
         
         with st.chat_message("assistant"):
             config_params = {}
