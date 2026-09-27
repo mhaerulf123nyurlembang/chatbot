@@ -100,7 +100,8 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                 prompt_final = prompt_teks
 
         with col_suara:
-            input_suara = st.audio_input("Klik untuk rekam suara:", label_visibility="collapsed", key="uploader_suara_unik") [https://streamlit.io]
+            # 💡 FIX: Tautan luar yang mengganggu di ujung baris ini sudah dihapus total
+            input_suara = st.audio_input("Klik untuk rekam suara:", label_visibility="collapsed", key="uploader_suara_unik")
             
             if input_suara:
                 audio_bytes = input_suara.read()
@@ -111,7 +112,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                         try:
                             base64_audio = base64.b64encode(audio_bytes).decode('utf-8')
                             
-                            # 💡 FIX URL UTAMA: Alamat URL audio dibersihkan total dari variabel penempelan
+                            # Alamat URL audio dibersihkan total dari variabel penempelan
                             url_audio = "https://googleapis.com"
                             
                             # Mengirim API Key lewat parameter terpisah agar tidak merusak host domain
@@ -159,7 +160,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                     messages=st.session_state.groq_messages
                 )
                 
-                jawaban_ai = respons.choices.message.content
+                jawaban_ai = respons.choices[0].message.content
                 
                 with st.chat_message("assistant"):
                     st.write(jawaban_ai)
@@ -179,7 +180,7 @@ else:
     foto_diunggah = st.file_uploader("Pilih berkas gambar Anda (Format: JPG, JPEG, PNG):", type=["jpg", "jpeg", "png"])
 
     if foto_diunggah:
-        col1, col2 = st.columns(2) [https://streamlit.io]
+        col1, col2 = st.columns(2)
         
         with col1:
             st.image(foto_diunggah, caption="Foto Yang Diunggah", use_container_width=True)
@@ -210,3 +211,4 @@ else:
             if st.button("🚀 Ekstrak & Jalankan Vision AI", use_container_width=True):
                 with st.spinner("Mengirimkan file gambar ke server Google Vision API..."):
                     bytes_foto = foto_diunggah.read()
+                    base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
