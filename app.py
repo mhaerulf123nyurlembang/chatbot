@@ -11,6 +11,15 @@ GEMINI_API_KEY_ANDA = "AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg"
 # Set halaman web agar memiliki tata letak yang bagus dan profesional
 st.set_page_config(page_title="AI Multi-Fungsi Platform", layout="wide", page_icon="🤖")
 
+# Custom CSS untuk memosisikan input area agar selalu berada di bawah layar ala ChatGPT
+st.markdown("""
+    <style>
+    .stChatInputContainer {
+        padding-bottom: 20px;
+    }
+    </style>
+""", unsafe_scale=True)
+
 # ==========================================
 # 📊 KONFIGURASI SIDEBAR (PANEL KONTROL)
 # ==========================================
@@ -30,7 +39,7 @@ if "groq_messages" not in st.session_state:
         {"role": "system", "content": "Anda adalah asisten AI yang sangat cerdas, responsif, ramah, dan membantu."}
     ]
 
-# 🌟 FITUR TAMBAHAN 1: EKSPOR CHAT (DOWNLOAD TXT)
+# FITUR TAMBAHAN 1: EKSPOR CHAT (DOWNLOAD TXT)
 st.sidebar.subheader("💾 Manajemen Data")
 if len(st.session_state.groq_messages) > 1:
     log_teks = f"RIWAYAT OBROLAN CHATBOT - Dibuat pada {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
@@ -60,7 +69,7 @@ if st.sidebar.button("🗑️ Sapukan / Bersihkan Chat", use_container_width=Tru
 # ==========================================
 if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     st.title("⚡ Chatbot AI Super Cepat (Powered by Groq)")
-    st.write("Aplikasi live stabil mendukung input teks manual dan rekaman suara.")
+    st.write("Aplikasi live dengan fitur input teks dan transkripsi suara yang menyatu di bagian bawah.")
 
     if GROQ_API_KEY_ANDA == "gsk_TEMPELKAN_KUNCI_GROQ_ASLI_DI_SINI" or not GROQ_API_KEY_ANDA:
         st.error("Silakan ganti kunci Groq API asli Anda di kode GitHub!")
@@ -68,45 +77,53 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     else:
         client = Groq(api_key=GROQ_API_KEY_ANDA)
 
-    # 💡 Perbaikan: Menampilkan chat yang ada di session_state terlebih dahulu
+    # Menampilkan riwayat obrolan di layar utama
     for msg in st.session_state.groq_messages:
         if msg["role"] != "system":
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
 
-    st.markdown("---")
-    st.write("🎙️ **Ingin berbicara langsung?** Gunakan alat perekam suara di bawah ini:")
-    input_suara = st.audio_input("Rekam suara Anda:")
-    
+    # 💡 FIX UTAMA: Membuat Container Kolom untuk Menyatukan Input Teks & Mikrofon Suara
+    input_container = st.container()
     prompt_final = ""
 
-    if input_suara:
-        with st.spinner("Sedang memproses suara Anda..."):
-            try:
-                audio_bytes = input_suara.read()
-                nama_file_virtual = "rekaman_suara.wav"
-                if hasattr(input_suara, 'name') and input_suara.name:
-                    nama_file_virtual = input_suara.name if "." in input_suara.name else f"{input_suara.name}.wav"
+    with input_container:
+        # Membagi baris bawah menjadi 2 kolom (Kolom 1 besar untuk Teks, Kolom 2 kecil untuk Mikrofon)
+        col_teks, col_suara = st.columns([6, 2], gap="small") [https://streamlit.io]
+        
+        with col_teks:
+            prompt_teks = st.chat_input("Ketik pesan Anda di sini...")
+            if prompt_teks:
+                prompt_final = prompt_teks
 
-                transkripsi = client.audio.transcriptions.create(
-                    model="whisper-large-v3",
-                    file=(nama_file_virtual, audio_bytes),
-                    response_format="text"
-                )
-                if transkripsi:
-                    prompt_final = str(transkripsi).strip()
-                    st.info(f"🗣️ **Suara Anda Berhasil Diterjemahkan:** \"{prompt_final}\"")
-            except Exception as audio_err:
-                st.error(f"Gagal memproses suara: {audio_err}")
+        with col_suara:
+            # Perekam suara diposisikan sejajar di sisi kanan kotak ketik
+            input_suara = st.audio_input("Klik untuk rekam suara:", label_visibility="collapsed") [https://streamlit.io]
+            if input_suara:
+                with st.spinner("🎙️ Menerjemahkan suara..."):
+                    try:
+                        audio_bytes = input_suara.read()
+                        nama_file_virtual = "rekaman_suara.wav"
+                        if hasattr(input_suara, 'name') and input_suara.name:
+                            nama_file_virtual = input_suara.name if "." in input_suara.name else f"{input_suara.name}.wav"
 
-    # Slot input teks manual standar
-    prompt_teks = st.chat_input("Ketik pesan Anda di sini...")
-    if prompt_teks:
-        prompt_final = prompt_teks
+                        transkripsi = client.audio.transcriptions.create(
+                            model="whisper-large-v3",
+                            file=(nama_file_virtual, audio_bytes),
+                            response_format="text"
+                        )
+                        if transkripsi:
+                            prompt_final = str(transkripsi).strip()
+                            st.info(f"🗣️ Terdeteksi: \"{prompt_final}\"")
+                    except Exception as audio_err:
+                        st.error(f"Gagal memproses suara: {audio_err}")
 
     # Eksekusi pengiriman pesan ke model utama
     if prompt_final:
-        # Tampilkan pesan user secara instan di layar dan simpan ke memori
+        # Cek duplikasi pesan terakhir
+        if len(st.session_state.groq_messages) > 1 and st.session_state.groq_messages[-1]["content"] == prompt_final:
+            st.stop()
+            
         with st.chat_message("user"):
             st.write(prompt_final)
         st.session_state.groq_messages.append({"role": "user", "content": prompt_final})
@@ -118,13 +135,12 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                     messages=st.session_state.groq_messages
                 )
                 
-                # Mengambil teks jawaban secara presisi dari indeks pertama list choices
                 jawaban_ai = respons.choices[0].message.content
                 
-                # Tampilkan balasan AI langsung ke layar dan simpan ke memori
                 with st.chat_message("assistant"):
                     st.write(jawaban_ai)
                 st.session_state.groq_messages.append({"role": "assistant", "content": jawaban_ai})
+                st.rerun()
                 
         except Exception as e:
             st.error(f"Gagal memanggil Groq API: {e}")
@@ -139,7 +155,7 @@ else:
     foto_diunggah = st.file_uploader("Pilih berkas gambar Anda (Format: JPG, JPEG, PNG):", type=["jpg", "jpeg", "png"])
 
     if foto_diunggah:
-        col1, col2 = st.columns(2)
+        col1, col2 = st.columns(2) [https://streamlit.io]
         
         with col1:
             st.image(foto_diunggah, caption="Foto Yang Diunggah", use_container_width=True)
@@ -197,16 +213,3 @@ else:
                         if response.status_code == 200:
                             hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
                             st.success("✨ Hasil Pemrosesan Vision AI:")
-                            st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
-                            
-                            st.download_button(
-                                label="💾 Unduh Hasil Teks Ekstraksi (.txt)",
-                                data=hasil_ekstraksi,
-                                file_name=f"hasil_ocr_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-                                mime="text/plain"
-                            )
-                        else:
-                            st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response_data}")
-                            
-                    except Exception as e:
-                        st.error(f"Terjadi kendala pemrosesan gambar: {e}")
