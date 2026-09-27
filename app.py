@@ -1,5 +1,6 @@
 import streamlit as st 
 from groq import Groq
+from openai import OpenAI
 import requests
 import base64
 from datetime import datetime
@@ -8,8 +9,9 @@ from datetime import datetime
 try:
     GROQ_API_KEY_ANDA = st.secrets["GROQ_API_KEY"]
     GEMINI_API_KEY_ANDA = st.secrets["GEMINI_API_KEY"]
+    OPENAI_API_KEY_ANDA = st.secrets["OPENAI_API_KEY"]
 except Exception:
-    st.error("Gagal membaca API Key! Pastikan Anda sudah mengisi menu Secrets di Streamlit Cloud dengan benar.")
+    st.error("Gagal membaca API Key! Pastikan Anda sudah mengisi menu Secrets di Streamlit Cloud dengan benar untuk GROQ, GEMINI, dan OPENAI.")
     st.stop()
 
 # Set halaman web agar memiliki tata letak yang bagus dan profesional
@@ -29,9 +31,14 @@ st.markdown("""
 # ==========================================
 st.sidebar.title("⚙️ Panel Kontrol AI")
 
+# Menambahkan Modul Baru ke-3 untuk Generate Gambar
 mode_aplikasi = st.sidebar.radio(
     "Pilih Fitur Utama:",
-    ["💬 Chat Teks & Suara (Groq)", "🖼️ Vision AI & OCR (Gemini)"]
+    [
+        "💬 Chat Teks & Suara (Groq)", 
+        "🖼️ Vision AI & OCR (Gemini)",
+        "🎨 Buat Gambar AI (DALL-E 3 / ChatGPT)"
+    ]
 )
 
 st.sidebar.markdown("---")
@@ -47,8 +54,8 @@ if "last_processed_audio" not in st.session_state:
     st.session_state.last_processed_audio = None
 
 # FITUR TAMBAHAN 1: EKSPOR CHAT (DOWNLOAD TXT)
-st.sidebar.subheader("💾 Manajemen Data")
-if len(st.session_state.groq_messages) > 1:
+if mode_aplikasi == "💬 Chat Teks & Suara (Groq)" and len(st.session_state.groq_messages) > 1:
+    st.sidebar.subheader("💾 Manajemen Data")
     log_teks = f"RIWAYAT OBROLAN CHATBOT\n"
     log_teks += "="*50 + "\n\n"
     for msg in st.session_state.groq_messages:
@@ -86,6 +93,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
 
+    # Container Kolom untuk Menyatukan Input Teks & Perekam Suara
     input_container = st.container()
     prompt_final = ""
 
@@ -141,7 +149,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
 # ==========================================
 # 🖼️ MODUL 2: VISION AI & OCR EKSTRAKTOR (GEMINI)
 # ==========================================
-else:
+elif mode_aplikasi == "🖼️ Vision AI & OCR (Gemini)":
     st.title("🖼️ Vision AI & OCR Ekstraktor Dokumen")
     st.write("Unggah foto kuitansi, tulisan tangan, atau gambar apa saja untuk diekstrak teksnya.")
 
@@ -182,7 +190,6 @@ else:
                     base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
                     tipe_konten = foto_diunggah.type
 
-                    # 💡 FIX STRUKTUR TOTAL: Alur murni linear tanpa ada pernyataan 'try' bersarang di Modul 2
                     url = f"https://googleapis.com{GEMINI_API_KEY_ANDA}"
                     headers = {"Content-Type": "application/json"}
                     
@@ -206,3 +213,9 @@ else:
                         st.download_button(label="💾 Unduh Hasil Teks Ekstraksi (.txt)", data=hasil_ekstraksi, file_name="hasil_ocr.txt", mime="text/plain")
                     else:
                         st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response.text}")
+
+# ==========================================
+# 🎨 MODUL 3: TEXT-TO-IMAGE GENERATOR (OPENAI DALL-E 3)
+# ==========================================
+else:
+    st.title("🎨 AI Image Generator (Powered by DALL-E 3 / ChatGPT)")
