@@ -68,6 +68,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     else:
         client = Groq(api_key=GROQ_API_KEY_ANDA)
 
+    # 💡 Perbaikan: Menampilkan chat yang ada di session_state terlebih dahulu
     for msg in st.session_state.groq_messages:
         if msg["role"] != "system":
             with st.chat_message(msg["role"]):
@@ -98,31 +99,33 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
             except Exception as audio_err:
                 st.error(f"Gagal memproses suara: {audio_err}")
 
-    prompt_teks = st.chat_input("Atau ketik pesan Anda secara manual di sini...")
+    # Slot input teks manual standar
+    prompt_teks = st.chat_input("Ketik pesan Anda di sini...")
     if prompt_teks:
         prompt_final = prompt_teks
 
+    # Eksekusi pengiriman pesan ke model utama
     if prompt_final:
-        if len(st.session_state.groq_messages) > 1 and st.session_state.groq_messages[-1]["content"] == prompt_final:
-            st.stop()
-            
+        # Tampilkan pesan user secara instan di layar dan simpan ke memori
         with st.chat_message("user"):
             st.write(prompt_final)
         st.session_state.groq_messages.append({"role": "user", "content": prompt_final})
 
         try:
-            respons = client.chat.completions.create(
-                model="openai/gpt-oss-120b",
-                messages=st.session_state.groq_messages
-            )
-            
-            # 💡 FIX UTAMA: Menambahkan indeks [0] untuk membaca list dari objek choices
-            jawaban_ai = respons.choices[0].message.content
-            
-            with st.chat_message("assistant"):
-                st.write(jawaban_ai)
-            st.session_state.groq_messages.append({"role": "assistant", "content": jawaban_ai})
-            st.rerun()
+            with st.spinner("AI sedang berpikir..."):
+                respons = client.chat.completions.create(
+                    model="openai/gpt-oss-120b",
+                    messages=st.session_state.groq_messages
+                )
+                
+                # Mengambil teks jawaban secara presisi dari indeks pertama list choices
+                jawaban_ai = respons.choices[0].message.content
+                
+                # Tampilkan balasan AI langsung ke layar dan simpan ke memori
+                with st.chat_message("assistant"):
+                    st.write(jawaban_ai)
+                st.session_state.groq_messages.append({"role": "assistant", "content": jawaban_ai})
+                
         except Exception as e:
             st.error(f"Gagal memanggil Groq API: {e}")
 
