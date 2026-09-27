@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 from google import genai
 from google.genai import types
 
@@ -6,22 +7,26 @@ from google.genai import types
 st.set_page_config(page_title="AI Chatbot Pro", page_icon="🤖", layout="wide")
 
 # ==========================================
-# 2. KONFIGURASI SIDEBAR
+# KONEKSI API OTOMATIS (Membaca dari Sistem)
+# ==========================================
+# Memeriksa apakah API Key ada di Streamlit Secrets atau Environment Variable
+if "GEMINI_API_KEY" in st.secrets:
+    api_key_env = st.secrets["GEMINI_API_KEY"]
+elif os.environ.get("GEMINI_API_KEY"):
+    api_key_env = os.environ.get("GEMINI_API_KEY")
+else:
+    api_key_env = None
+
+# ==========================================
+# 2. KONFIGURASI SIDEBAR (Tanpa Kolom API Key)
 # ==========================================
 with st.sidebar:
     st.title("⚙️ Pengaturan Chatbot")
-    
-    # Input API Key baru (Format AQ.)
-    api_key_input = st.text_input(
-        "1. Google Gemini API Key:", 
-        type="password", 
-        help="Masukkan API Key baru Anda (biasanya diawali dengan AQ.)"
-    )
-    st.markdown("[👉 Dapatkan API Key Gratis di Sini](https://aistudio.google.com/)")
+    st.write("Status API: ✅ Terhubung Otomatis" if api_key_env else "❌ API Key Belum Dikonfigurasi")
     st.markdown("---")
     
     # Pilihan Model Gemini
-    st.subheader("2. Pilih Model AI")
+    st.subheader("1. Pilih Model AI")
     selected_model = st.selectbox(
         "Pilih kecerdasan bot:",
         ["gemini-2.5-flash", "gemini-2.5-pro"],
@@ -30,7 +35,7 @@ with st.sidebar:
     st.markdown("---")
     
     # Pengaturan Peran / Kepribadian Bot
-    st.subheader("3. Kepribadian Bot")
+    st.subheader("2. Kepribadian Bot")
     system_instruction = st.text_area(
         "Instruksi Khusus (System Prompt):",
         value="Anda adalah asisten AI yang ramah, sopan, dan membantu menjawab dalam bahasa Indonesia."
@@ -47,6 +52,11 @@ with st.sidebar:
 # ==========================================
 st.title("🤖 Chatbot AI Interaktif")
 
+# Menghentikan aplikasi jika API Key benar-benar belum dikonfigurasi di sistem
+if not api_key_env:
+    st.error("⚠️ API Key tidak ditemukan! Silakan atur 'GEMINI_API_KEY' di komputer lokal Anda atau di menu Secrets Streamlit Cloud.")
+    st.stop()
+
 # Inisialisasi Riwayat Obrolan di Session State
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -58,11 +68,6 @@ for message in st.session_state.messages:
 
 # Logika Utama saat Pengguna Mengirim Pesan
 if prompt := st.chat_input("Tanya sesuatu kepada AI..."):
-    # Validasi API Key kosong
-    if not api_key_input:
-        st.error("⚠️ Silakan masukkan Gemini API Key terlebih dahulu di sidebar kiri!")
-        st.stop()
-
     # Tampilkan pesan pengguna di layar
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
@@ -70,11 +75,10 @@ if prompt := st.chat_input("Tanya sesuatu kepada AI..."):
 
     # Kirim ke Google Gemini API dengan konfigurasi dari sidebar
     try:
-        # PERBAIKAN UTAMA: Memaksa inisialisasi langsung menggunakan string API Key Anda
-        client = genai.Client(api_key=api_key_input.strip())
+        # Menginisialisasi klien menggunakan kunci yang tersimpan otomatis
+        client = genai.Client(api_key=api_key_env.strip())
         
         with st.chat_message("assistant"):
-            # Konfigurasi instansiasi instruksi sistem yang aman
             config_params = {}
             if system_instruction.strip():
                 config_params["system_instruction"] = system_instruction.strip()
@@ -91,6 +95,4 @@ if prompt := st.chat_input("Tanya sesuatu kepada AI..."):
         st.session_state.messages.append({"role": "assistant", "content": response_text})
 
     except Exception as e:
-        # Menampilkan detail error yang lebih mudah dipahami jika terjadi masalah jaringan
         st.error(f"Terjadi kesalahan pada API: {e}")
-        st.info("💡 Tips: Pastikan tidak ada spasi kosong yang ikut tersalin di depan atau belakang API Key Anda.")
