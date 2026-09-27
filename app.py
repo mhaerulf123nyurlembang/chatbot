@@ -46,7 +46,7 @@ def retrieve_relevant_context(query, chunks, top_k=3):
     query_vector = vectorizer.transform([query])
     
     similarities = cosine_similarity(query_vector, tfidf_matrix).flatten()
-    top_indices = similarities.argsort()[-top_k:][::-1]
+    top_indices = similarities.argsort()[-k:][::-1] if len(chunks) >= top_k else similarities.argsort()[::-1]
     
     relevant_chunks = [chunks[idx] for idx in top_indices if similarities[idx] > 0.05]
     return "\n\n".join(relevant_chunks)
@@ -85,9 +85,36 @@ with st.sidebar:
     )
     st.markdown("---")
     
+    # NEW FEATURE: MENU PILIHAN KEPRIBADIAN INSTAN
+    st.subheader("👤 Kepribadian Bot")
+    preset_kepribadian = st.selectbox(
+        "Pilih Peran Preset:",
+        [
+            "Asisten Umum", 
+            "Customer Service Ramah", 
+            "Senior Programmer", 
+            "Data Analyst & Researcher", 
+            "Kustom (Tulis Sendiri)"
+        ],
+        index=0
+    )
+    
+    # Logika penentuan teks instruksi sistem bawaan berdasarkan dropdown
+    default_prompt = "Anda adalah asisten AI yang ramah, sopan, dan membantu menjawab dalam bahasa Indonesia."
+    if preset_kepribadian == "Customer Service Ramah":
+        default_prompt = "Anda adalah seorang Customer Service yang sangat sabar, ramah, dan profesional. Selalu gunakan sapaan hangat kepada pelanggan dan jawab dengan bahasa yang santun serta solutif."
+    elif preset_kepribadian == "Senior Programmer":
+        default_prompt = "Anda adalah seorang Senior Software Engineer yang ahli. Jawablah pertanyaan teknis pemrograman dengan langsung pada inti masalah, berikan contoh kode yang bersih (clean code), efisien, aman, serta jelaskan algoritma di balik solusi tersebut secara logis."
+    elif preset_kepribadian == "Data Analyst & Researcher":
+        default_prompt = "Anda adalah seorang Data Analyst dan Peneliti Senior. Analisis informasi yang diberikan secara kritis, gunakan pendekatan berbasis data, jelaskan korelasi sebab-akibat dengan jelas, dan sajikan poin penting secara analitis terstruktur."
+    elif preset_kepribadian == "Kustom (Tulis Sendiri)":
+        default_prompt = ""
+
+    # Kolom teks interaktif yang nilainya berubah mengikuti pilihan di atas
     system_instruction = st.text_area(
-        "Instruksi Kepribadian:",
-        value="Anda adalah asisten AI yang ramah, sopan, dan membantu menjawab dalam bahasa Indonesia."
+        "Modifikasi Instruksi Khusus (System Prompt):",
+        value=default_prompt,
+        placeholder="Tulis kepribadian kustom Anda di sini jika memilih opsi 'Kustom'..."
     )
     st.markdown("---")
     
@@ -99,7 +126,7 @@ with st.sidebar:
 # 3. KONTEN UTAMA CHATBOT
 # ==========================================
 st.title("📚 RAG AI Enterprise Chatbot (Groq)")
-st.write("Jika Anda mengunggah berkas PDF di sidebar, bot akan menjawab menggunakan basis pengetahuan tersebut.")
+st.write(f"Mode Aktif: **{preset_kepribadian}** | Bot akan menjawab menggunakan basis pengetahuan dari dokumen jika diunggah.")
 
 if not api_key_env:
     st.error("⚠️ API Key tidak ditemukan! Harap pasang 'GROQ_API_KEY' pada menu Secrets Streamlit Cloud.")
@@ -129,8 +156,9 @@ if prompt := st.chat_input("Tanyakan sesuatu ke AI..."):
         if context:
             base_instruction += (
                 f"\n\n[PENTING] Jawablah pertanyaan pengguna hanya berdasarkan dokumen referensi di bawah ini. "
-                f"Jika jawabannya tidak ada, katakan secara jujur bahwa informasi tersebut tidak tercantum dalam dokumen.\n\n"
-                f"Konieks Dokumen:\n{context}"
+                f"Tetap pertahankan gaya bahasa sesuai dengan kepribadian Anda ({preset_kepribadian}). "
+                f"Jika jawabannya tidak ada di dokumen, katakan secara jujur bahwa informasi tersebut tidak tercantum.\n\n"
+                f"Konteks Dokumen:\n{context}"
             )
             
         api_messages.append({"role": "system", "content": base_instruction})
@@ -149,7 +177,6 @@ if prompt := st.chat_input("Tanyakan sesuatu ke AI..."):
                 stream=True
             )
             
-            # PERBAIKAN UTAMA: Blok ekstraksi iterasi stream diperbaiki
             def stream_response():
                 for chunk in completion:
                     if chunk.choices and chunk.choices[0].delta.content:
