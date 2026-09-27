@@ -1,7 +1,6 @@
 import streamlit as st 
 from groq import Groq
 import requests
-import json
 import base64
 from datetime import datetime
 
@@ -74,7 +73,7 @@ if st.sidebar.button("🗑️ Sapukan / Bersihkan Chat", use_container_width=Tru
     st.rerun()
 
 # ==========================================
-# 🤖 MODUL 1: CHAT TTEKS & SUARA (GROQ)
+# 🤖 MODUL 1: CHAT TEKS & SUARA (GROQ)
 # ==========================================
 if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     st.title("⚡ Chatbot AI Super Cepat (Powered by Groq)")
@@ -179,41 +178,31 @@ else:
 
             if st.button("🚀 Ekstrak & Jalankan Vision AI", use_container_width=True):
                 with st.spinner("Mengirimkan file gambar ke server Google Vision API..."):
-                    try:
-                        bytes_foto = foto_diunggah.read()
-                        base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
-                        tipe_konten = foto_diunggah.type
+                    bytes_foto = foto_diunggah.read()
+                    base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
+                    tipe_konten = foto_diunggah.type
 
-                        # 💡 BYPASS 401 & CONNECTION ERROR: Menembak REST API murni menggunakan request post
-                        # Menaruh key langsung di URL (?key=) memaksa server meloloskan otentikasi kunci bertipe AQ.
-                        url = f"https://googleapis.com{GEMINI_API_KEY_ANDA}"
-                        
-                        headers = {"Content-Type": "application/json"}
-                        
-                        payload = {
-                            "contents": [{
-                                "parts": [
-                                    {"text": prompt_perintah},
-                                    {
-                                        "inlineData": {
-                                            "mimeType": tipe_konten,
-                                            "data": base64_foto
-                                        }
-                                    }
-                                ]
-                            }]
-                        }
+                    # 💡 FIX STRUKTUR TOTAL: Alur murni linear tanpa ada pernyataan 'try' bersarang di Modul 2
+                    url = f"https://googleapis.com{GEMINI_API_KEY_ANDA}"
+                    headers = {"Content-Type": "application/json"}
+                    
+                    payload = {
+                        "contents": [{
+                            "parts": [
+                                {"text": prompt_perintah},
+                                {"inlineData": {"mimeType": tipe_konten, "data": base64_foto}}
+                            ]
+                        }]
+                    }
 
-                        # Mengirim permintaan jaringan langsung ke gerbang API Google
-                        response = requests.post(url, headers=headers, json=payload)
+                    response = requests.post(url, headers=headers, json=payload)
+                    
+                    if response.status_code == 200:
+                        response_data = response.json()
+                        hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
                         
-                        if response.status_code == 200:
-                            response_data = response.json()
-                            hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
-                            
-                            st.success("✨ Hasil Pemrosesan Vision AI:")
-                            st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
-                            st.download_button(label="💾 Unduh Hasil Teks Ekstraksi (.txt)", data=hasil_ekstraksi, file_name="hasil_ocr.txt", mime="text/plain")
-                        else:
-                            st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response.text}")
-                            
+                        st.success("✨ Hasil Pemrosesan Vision AI:")
+                        st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
+                        st.download_button(label="💾 Unduh Hasil Teks Ekstraksi (.txt)", data=hasil_ekstraksi, file_name="hasil_ocr.txt", mime="text/plain")
+                    else:
+                        st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response.text}")
