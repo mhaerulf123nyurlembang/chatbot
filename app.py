@@ -182,40 +182,39 @@ else:
 
             if st.button("🚀 Ekstrak & Jalankan Vision AI", use_container_width=True):
                 with st.spinner("Mengirimkan file gambar ke server Google Vision API..."):
-                    try:
-                        bytes_foto = foto_diunggah.read()
-                        base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
-                        tipe_konten = foto_diunggah.type
+                    bytes_foto = foto_diunggah.read()
+                    base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
+                    tipe_konten = foto_diunggah.type
 
-                        url = "https://googleapis.com"
-                        
-                        query_params_vision = {
-                            "key": GEMINI_API_KEY_ANDA
-                        }
-                        
-                        headers = {"Content-Type": "application/json"}
-                        
-                        payload = {
-                            "contents": [{
-                                "parts": [
-                                    {"text": prompt_perintah},
-                                    {
-                                        "inlineData": {
-                                            "mimeType": tipe_konten,
-                                            "data": base64_foto
-                                        }
+                    url = "https://googleapis.com"
+                    
+                    query_params_vision = {
+                        "key": GEMINI_API_KEY_ANDA
+                    }
+                    
+                    headers = {"Content-Type": "application/json"}
+                    
+                    payload = {
+                        "contents": [{
+                            "parts": [
+                                {"text": prompt_perintah},
+                                {
+                                    "inlineData": {
+                                        "mimeType": tipe_konten,
+                                        "data": base64_foto
                                     }
-                                ]
-                            }]
-                        }
+                                }
+                            ]
+                        }]
+                    }
 
+                    # 💡 FIX STRUKTUR FINAL: Blok try-except Modul 2 dibuat teratur dan ditutup sempurna secara terpisah
+                    try:
                         response = requests.post(url, headers=headers, params=query_params_vision, json=payload)
                         
-                        # 💡 SOLUSI REMOVE ELSE: Membalikkan logika (jika bukan 200, stop). Jalur sukses berjalan lurus tanpa blok 'else' bertingkat.
-                        if response.status_code != 200:
-                            st.error(f"Server Google menolak permintaan (Status {response.status_code}): {response.text}")
-                            st.stop()
-                        
-                        response_data = response.json()
-                        hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
-                        
+                        if response.status_code == 200:
+                            response_data = response.json()
+                            hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
+                            
+                            st.success("✨ Hasil Pemrosesan Vision AI:")
+                            st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
