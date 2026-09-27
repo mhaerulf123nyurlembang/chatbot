@@ -197,7 +197,6 @@ else:
                         
                         if response.status_code == 200:
                             response_data = response.json()
-                            # 💡 FIX BLOK PENUTUP INDEKS STRUKTUR
                             try:
                                 hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
                                 st.success("✨ Hasil Pemrosesan Vision AI:")
@@ -211,3 +210,5 @@ else:
                                     mime="text/plain"
                                 )
                             except (KeyError, IndexError):
+                                st.error(f"Gagal mengurai respons JSON Google. Data mentah: {response_data}")
+                        else:
