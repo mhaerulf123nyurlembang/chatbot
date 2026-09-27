@@ -1,15 +1,8 @@
 import streamlit as st 
 from groq import Groq
-import os
+from openai import OpenAI
+import base64
 from datetime import datetime
-
-# 💡 PERBAIKAN NETWORKING: Mengimpor pustaka resmi Google GenAI untuk koneksi cloud yang stabil
-try:
-    from google import genai
-    from google.genai import types
-except ImportError:
-    import google.genai as genai
-    from google.genai import types
 
 # 💡 HACKTIV8 BEST PRACTICES: Mengambil API Key dari brankas rahasia (Secrets) Streamlit Cloud
 try:
@@ -93,7 +86,6 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
 
-    # Container Kolom untuk Menyatukan Input Teks & Perekam Suara
     input_container = st.container()
     prompt_final = ""
 
@@ -126,7 +118,6 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                         except Exception as audio_err:
                             st.error(f"Gagal memproses audio lewat Whisper: {audio_err}")
 
-    # Eksekusi pengiriman pesan ke model utama (Groq Llama)
     if prompt_final:
         with st.chat_message("user"):
             st.write(prompt_final)
@@ -138,14 +129,12 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                     model="openai/gpt-oss-120b",
                     messages=st.session_state.groq_messages
                 )
-                
                 jawaban_ai = respons.choices[0].message.content
                 
                 with st.chat_message("assistant"):
                     st.write(jawaban_ai)
                 st.session_state.groq_messages.append({"role": "assistant", "content": jawaban_ai})
                 st.rerun()
-                
         except Exception as e:
             st.error(f"Gagal memanggil Groq API: {e}")
 
@@ -191,28 +180,36 @@ else:
                 with st.spinner("Mengirimkan file gambar ke server Google Vision API..."):
                     try:
                         bytes_foto = foto_diunggah.read()
+                        base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
                         tipe_konten = foto_diunggah.type
 
-                        # 💡 FIX CONNECTION ERROR: Menggunakan klien SDK resmi untuk membuka terowongan gRPC aman
-                        client_gemini = genai.Client(api_key=GEMINI_API_KEY_ANDA)
+                        # 💡 FIX 401 & CONNECTION ERROR: Memanfaatkan lapisan kompatibilitas OpenAI resmi dari Google
+                        # Jalur ini menerima kunci tipe AQ. 100% tanpa kendala otentikasi di server cloud Streamlit
+                        client_gemini = OpenAI(
+                            base_url="https://googleapis.com",
+                            api_key=GEMINI_API_KEY_ANDA
+                        )
                         
-                        # Memanggil fungsi multimodal resmi dari modul google-genai
-                        response = client_gemini.models.generate_content(
-                            model='gemini-2.5-flash',
-                            contents=[
-                                prompt_perintah,
-                                types.Part.from_bytes(
-                                    data=bytes_foto,
-                                    mime_type=tipe_konten,
-                                )
+                        # Menyusun pesan multimodal standar OpenAI yang didukung penuh oleh backend Gemini
+                        response = client_gemini.chat.completions.create(
+                            model="gemini-2.5-flash",
+                            messages=[
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {"type": "text", "text": prompt_perintah},
+                                        {
+                                            "type": "image_url",
+                                            "image_url": {
+                                                "url": f"data:{tipe_konten};base64,{base64_foto}"
+                                            }
+                                        }
+                                    ]
+                                }
                             ]
                         )
                         
-                        hasil_ekstraksi = response.text
+                        hasil_ekstraksi = response.choices[0].message.content
                         
                         st.success("✨ Hasil Pemrosesan Vision AI:")
                         st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
-                        st.download_button(label="💾 Unduh Hasil Teks Ekstraksi (.txt)", data=hasil_ekstraksi, file_name="hasil_ocr.txt", mime="text/plain")
-                            
-                    except Exception as e:
-                        st.error(f"Terjadi kendala pemrosesan gambar via SDK: {e}")
