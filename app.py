@@ -1,12 +1,13 @@
 import streamlit as st
 import os
+import json
 from groq import Groq
 from PyPDF2 import PdfReader
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # 1. Konfigurasi Halaman Web Streamlit
-st.set_page_config(page_title="RAG AI Chatbot Pro", page_icon="📚", layout="wide")
+st.set_page_config(page_title="Agentic RAG AI Chatbot", page_icon="🕵️‍♂️", layout="wide")
 
 # ==========================================
 # KONEKSI API OTOMATIS (Membaca dari Sistem)
@@ -19,10 +20,9 @@ else:
     api_key_env = None
 
 # ==========================================
-# FUNGSI MESIN UTAMA RAG (Sistem Ekstraksi & Pencarian Dokumen)
+# FUNGSI UTAMA RAG (Sistem Ekstraksi & Pencarian Dokumen)
 # ==========================================
 def extract_text_from_pdf(pdf_file):
-    """Membaca isi teks dari file PDF."""
     pdf_reader = PdfReader(pdf_file)
     text = ""
     for page in pdf_reader.pages:
@@ -30,8 +30,7 @@ def extract_text_from_pdf(pdf_file):
             text += page.extract_text() + "\n"
     return text
 
-def split_text_into_chunks(text, chunk_size=700, chunk_overlap=150):
-    """Memotong teks panjang menjadi fragmen kecil (chunk) dengan overlap aman."""
+def split_text_into_chunks(text, chunk_size=600, chunk_overlap=120):
     words = text.split()
     chunks = []
     for i in range(0, len(words), chunk_size - chunk_overlap):
@@ -39,150 +38,203 @@ def split_text_into_chunks(text, chunk_size=700, chunk_overlap=150):
         chunks.append(chunk)
     return chunks
 
-def retrieve_relevant_context(query, chunks, top_k=3):
-    """Mencari potongan dokumen (chunks) yang paling relevan dengan pertanyaan user menggunakan TF-IDF."""
+def tool_cari_di_dokumen(query):
+    """Mencari potongan dokumen (chunks) yang relevan berdasarkan query user."""
+    chunks = st.session_state.get("document_chunks", [])
     if not chunks:
-        return ""
+        return "Dokumen kosong atau belum diunggah oleh pengguna."
     
-    # Menghitung bobot kata pada dokumen & query
     vectorizer = TfidfVectorizer()
     tfidf_matrix = vectorizer.fit_transform(chunks)
     query_vector = vectorizer.transform([query])
     
-    # Menghitung tingkat kemiripan kosinus
     similarities = cosine_similarity(query_vector, tfidf_matrix).flatten()
-    
-    # Mengambil indeks top_k potongan dokumen dengan skor tertinggi
-    top_indices = similarities.argsort()[-top_k:][::-1]
+    top_indices = similarities.argsort()[-3:][::-1]
     
     relevant_chunks = [chunks[idx] for idx in top_indices if similarities[idx] > 0.05]
+    if not relevant_chunks:
+        return "Tidak ditemukan informasi spesifik yang relevan di dalam dokumen."
     return "\n\n".join(relevant_chunks)
 
 # ==========================================
-# 2. KONFIGURASI SIDEBAR (Fitur Unggah Dokumen RAG)
+# DEFINISI ALAT AGEN (Agent Tools)
+# ==========================================
+def tool_kalkulator_akurat(ekspresi_matematika):
+    """Mengeksekusi perhitungan matematika string secara aman menggunakan Python eval()."""
+    try:
+        # Membersihkan karakter berbahaya untuk keamanan sistem
+        allowed_chars = "0123456789+-*/(). "
+        if all(c in allowed_chars for c in ekspresi_matematika):
+            hasil = eval(ekspresi_matematika)
+            return f"Hasil perhitungan dari {ekspresi_matematika} adalah: {hasil}"
+        else:
+            return "Error: Ekspresi mengandung karakter terlarang demi keamanan."
+    except Exception as e:
+        return f"Gagal menghitung: {str(e)}"
+
+# Kamus pemetaan string nama tool ke fungsi aslinya
+AVAILABLE_TOOLS = {
+    "tool_cari_di_dokumen": tool_cari_di_dokumen,
+    "tool_kalkulator_akurat": tool_kalkulator_akurat
+}
+
+# Skema JSON deklarasi alat untuk dikirim ke API Groq
+tools_schema = [
+    {
+        "type": "function",
+        "function": {
+            "name": "tool_cari_di_dokumen",
+            "description": "Gunakan alat ini ketika pengguna menanyakan informasi yang berkaitan dengan isi dokumen, berkas PDF, SOP, laporan, atau data khusus yang mereka unggah.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Kata kunci atau inti pertanyaan untuk melacak dokumen."}
+                },
+                "required": ["query"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "tool_kalkulator_akurat",
+            "description": "Gunakan alat ini khusus saat pengguna meminta perhitungan matematika numerik presisi seperti penjumlahan, perkalian, pembagian, hitungan rumus, dsb.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "ekspresi_matematika": {"type": "string", "description": "Ekspresi matematika mentah standar Python, contoh: '(25000 * 0.1) + 4500'"}
+                },
+                "required": ["ekspresi_matematika"]
+            }
+        }
+    }
+]
+
+# ==========================================
+# 2. KONFIGURASI SIDEBAR
 # ==========================================
 with st.sidebar:
-    st.title("⚙️ Panel Kontrol RAG")
-    st.write("Status API: ✅ Terhubung" if api_key_env else "❌ Kunci Belum Dikonfigurasi")
+    st.title("🕵️‍♂️ Agen Kontrol Panel")
+    st.write("Status API: ✅ Terhubung" if api_key_env else "❌ Belum Dikonfigurasi")
     st.markdown("---")
     
-    # MENU UTAMA RAG: Unggah File Basis Pengetahuan
-    st.subheader("📚 Sumber Basis Data (RAG)")
-    uploaded_file = st.file_uploader(
-        "Unggah Dokumen Referensi (PDF):", 
-        type=["pdf"],
-        help="Unggah dokumen PDF seperti SOP, katalog produk, atau materi studi agar AI dapat menjawab berdasarkan file ini."
-    )
+    st.subheader("📚 Knowledge Base (RAG)")
+    uploaded_file = st.file_uploader("Unggah PDF Referensi:", type=["pdf"])
     
-    # Memproses dokumen secara instan saat diunggah
-    document_chunks = []
-    if uploaded_file is not None:
-        with st.spinner("Sedang mengekstrak & memproses dokumen..."):
+    if uploaded_file is not None and "document_chunks" not in st.session_state:
+        with st.spinner("Mengekstrak berkas..."):
             raw_text = extract_text_from_pdf(uploaded_file)
             if raw_text.strip():
-                document_chunks = split_text_into_chunks(raw_text)
-                st.success(f"Berhasil memuat {len(document_chunks)} fragmen data dokumen!")
+                st.session_state.document_chunks = split_text_into_chunks(raw_text)
+                st.success(f"Berhasil memuat data dokumen!")
             else:
-                st.error("Gagal mengekstrak teks. Pastikan PDF Anda tidak dikunci atau berupa gambar (scan).")
+                st.error("Gagal mengekstrak teks.")
     st.markdown("---")
     
-    # Pilihan Model Terbaru Groq yang Aktif
-    st.subheader("🤖 Pengaturan Model")
+    st.subheader("🤖 Pengaturan Otak Agen")
     selected_model = st.selectbox(
-        "Pilih Model AI:",
-        ["qwen/qwen3.8-27b", "openai/gpt-oss-20b", "openai/gpt-oss-120b"],
+        "Pilih Model (Wajib Model yang Dukung Tool Call):",
+        ["qwen/qwen3.8-27b", "openai/gpt-oss-120b"],
         index=0
     )
     
-    # Pengaturan Instruksi Sistem Dasar
     system_instruction = st.text_area(
-        "Instruksi Kepribadian:",
-        value="Anda adalah asisten AI yang ramah, sopan, dan membantu menjawab dalam bahasa Indonesia."
+        "Instruksi Dasar Agen:",
+        value="Anda adalah AI Agent Enterprise yang cerdas dan jujur. Anda dibekali alat (Tools) untuk mencari data dokumen dan berhitung matematika. Gunakan alat tersebut setiap kali relevan sebelum menjawab."
     )
     st.markdown("---")
     
-    # Tombol Kontrol (Hapus Chat)
     if st.button("🔄 Hapus Riwayat Chat", use_container_width=True):
         st.session_state.messages = []
+        if "document_chunks" in st.session_state:
+            del st.session_state.document_chunks
         st.rerun()
 
 # ==========================================
 # 3. KONTEN UTAMA CHATBOT
 # ==========================================
-st.title("📚 RAG AI Enterprise Chatbot (Groq)")
-st.write("Jika Anda mengunggah dokumen PDF di sidebar, bot akan secara otomatis mencari jawaban dari dalam dokumen tersebut.")
+st.title("🕵️‍♂️ Agentic RAG Multi-Tool Chatbot")
+st.write("Agen cerdas ini secara mandiri menentukan kapan harus membaca dokumen RAG Anda atau kapan harus menggunakan kalkulator.")
 
-# Menghentikan aplikasi jika API Key belum terpasang
 if not api_key_env:
-    st.error("⚠️ API Key tidak ditemukan! Harap pasang 'GROQ_API_KEY' pada konfigurasi sistem Anda.")
-    st.markdown("[👉 Dapatkan API Key Groq Gratis di Sini](https://groq.com)")
+    st.error("⚠️ API Key tidak ditemukan! Harap pasang 'GROQ_API_KEY'.")
     st.stop()
 
-# Inisialisasi Riwayat Obrolan di Session State
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Tampilkan Riwayat Obrolan dari Sesi Sebelumnya
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+    if message["role"] != "system":
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-# Logika Utama saat Pengguna Mengirim Pesan
-if prompt := st.chat_input("Tanyakan sesuatu ke AI..."):
-    # Tampilkan pesan pengguna di layar
+# Jalur Eksekusi Utama saat Chat Terkirim
+if prompt := st.chat_input("Perintahkan agen sesuatu..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # ALUR PROSES RAG: Cari Konteks Relevan dari PDF
-    context = ""
-    if document_chunks:
-        context = retrieve_relevant_context(prompt, document_chunks, top_k=3)
-
-    # Kirim ke Groq API beserta Konteks Dokumen (Jika Ada)
     try:
         client = Groq(api_key=api_key_env.strip())
         
-        # Menyusun paket pesan komparatif
-        api_messages = []
-        
-        # Memodifikasi instruksi sistem dinamis berdasarkan ketersediaan data RAG
-        base_instruction = system_instruction.strip()
-        if context:
-            base_instruction += (
-                f"\n\n[PENTING] Anda dibekali dokumen referensi resmi di bawah ini. Jawablah pertanyaan pengguna "
-                f"hanya berdasarkan informasi relevan ini. Jika jawabannya tidak ada di dokumen, katakan secara jujur "
-                f"bahwa informasi tersebut tidak tercantum dalam dokumen yang diunggah.\n\nKonteks Dokumen:\n{context}"
-            )
-            
-        api_messages.append({"role": "system", "content": base_instruction})
-        
-        # Tambahkan riwayat obrolan lama & pesan baru
+        # Susun riwayat pesan untuk API
+        api_messages = [{"role": "system", "content": system_instruction.strip()}]
         for msg in st.session_state.messages:
-            api_messages.append(msg)
-        api_messages.append({"role": "user", "content": prompt})
-
+            api_messages.append({"role": msg["role"], "content": msg["content"]})
+            
         with st.chat_message("assistant"):
-            # Jika ada dokumen yang dipakai, berikan notifikasi transparansi (Kriteria Nilai Tambah Hacktiv8)
-            if context:
-                st.caption("📑 *AI sedang menganalisis dokumen referensi Anda...*")
-                
-            completion = client.chat.completions.create(
+            status_container = st.empty()
+            status_container.caption("🧠 *Agen sedang menganalisis perintah...*")
+            
+            # PANGGILAN PERTAMA: AI mengevaluasi apakah butuh menggunakan alat (Tool Call)
+            response = client.chat.completions.create(
                 model=selected_model,
                 messages=api_messages,
-                temperature=0.3, # Diperkecil agar AI patuh pada konteks dokumen dan menghindari halusinasi
-                stream=True
+                tools=tools_schema,
+                tool_choice="auto",
+                temperature=0.2
             )
             
-            def stream_response():
-                for chunk in completion:
-                    if chunk.choices.delta.content:
-                        yield chunk.choices.delta.content
-                        
-            response_text = st.write_stream(stream_response())
+            response_message = response.choices[0].message
+            tool_calls = response_message.tool_calls
             
-        # Simpan riwayat chat yang baru
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        st.session_state.messages.append({"role": "assistant", "content": response_text})
-
-    except Exception as e:
-        st.error(f"Terjadi kesalahan pada Groq API: {e}")
+            # Jika Agen MEMUTUSKAN untuk menggunakan satu atau beberapa alat:
+            if tool_calls:
+                # Masukkan respons awal berisi niat panggilah tool dari AI ke riwayat
+                api_messages.append(response_message)
+                
+                for tool_call in tool_calls:
+                    function_name = tool_call.function.name
+                    function_args = json.loads(tool_call.function.arguments)
+                    
+                    status_container.caption(f"🛠️ *Agen memutuskan memakai alat: `{function_name}`...*")
+                    
+                    # Mengeksekusi fungsi lokal berdasarkan pilihan agen
+                    target_function = AVAILABLE_TOOLS[function_name]
+                    if function_name == "tool_cari_di_dokumen":
+                        hasil_tool = target_function(query=function_args.get("query"))
+                    elif function_name == "tool_kalkulator_akurat":
+                        hasil_tool = target_function(ekspresi_matematika=function_args.get("ekspresi_matematika"))
+                        
+                    # Mengirimkan hasil eksekusi tool kembali ke model
+                    api_messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "name": function_name,
+                        "content": hasil_tool
+                    })
+                
+                status_container.caption("✍️ *Agen sedang menyusun jawaban final dari data alat...*")
+                
+                # PANGGILAN KEDUA: Mengirimkan hasil olahan alat untuk dirangkum ke teks jawaban final
+                final_completion = client.chat.completions.create(
+                    model=selected_model,
+                    messages=api_messages,
+                    stream=True
+                )
+                
+                def stream_agent_response():
+                    for chunk in final_completion:
+                        if chunk.choices[0].delta.content:
+                            yield chunk.choices[0].delta.content
+                            
