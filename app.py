@@ -88,7 +88,6 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     prompt_final = ""
 
     with input_container:
-        # Membagi baris bawah menjadi 2 kolom (6 bagian untuk teks, 2 bagian untuk suara)
         col_teks, col_suara = st.columns([6, 2], gap="small")
         
         with col_teks:
@@ -97,7 +96,6 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                 prompt_final = prompt_teks
 
         with col_suara:
-            # Perekam suara diposisikan sejajar di sisi kanan kotak ketik
             input_suara = st.audio_input("Klik untuk rekam suara:", label_visibility="collapsed")
             if input_suara:
                 with st.spinner("🎙️ Menerjemahkan suara..."):
@@ -120,7 +118,6 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
 
     # Eksekusi pengiriman pesan ke model utama
     if prompt_final:
-        # Cek duplikasi pesan terakhir
         if len(st.session_state.groq_messages) > 1 and st.session_state.groq_messages[-1]["content"] == prompt_final:
             st.stop()
             
@@ -171,7 +168,7 @@ else:
                 ]
             )
             
-            instruksi_tambahan = st.text_input("Tuliskan instruksi tambahan (Opsional):", value="")
+            instruksi_tambahan = st.text_input("Tuliskan instruksi tambahan (Opsional):")
             
             if "OCR Murni" in opsi_tugas:
                 prompt_perintah = "Lakukan OCR tingkat tinggi. Tolong baca gambar ini dan salin ulang setiap baris teks, huruf, angka, atau simbol yang Anda lihat di dalam gambar ini tanpa menambahkan opini atau kesimpulan Anda. Tulis dalam format teks bersih."
@@ -215,5 +212,10 @@ else:
                             st.success("✨ Hasil Pemrosesan Vision AI:")
                             st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
                             
-                            # 💡 FIX UTAMA: Struktur fungsi download_button di bawah ini ditutup dengan kurung sempurna
                             st.download_button(
+                                label="💾 Unduh Hasil Teks Ekstraksi (.txt)",
+                                data=hasil_ekstraksi,
+                                file_name="hasil_ocr.txt",
+                                mime="text/plain"
+                            )
+                        else:
