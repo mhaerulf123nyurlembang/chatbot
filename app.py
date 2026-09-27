@@ -1,13 +1,24 @@
 import streamlit as st 
 from groq import Groq
-import urllib3
-import json
-import base64
+import os
+from datetime import datetime
+
+# 💡 SOLUSI REKAYASA JARINGAN: Mengimpor SDK Resmi Google GenAI (Aman dari MaxRetryError)
+try:
+    from google import genai
+    from google.genai import types
+except ImportError:
+    import google.genai as genai
+    from google.genai import types
 
 # 💡 HACKTIV8 BEST PRACTICES: Mengambil API Key dari brankas rahasia (Secrets) Streamlit Cloud
 try:
     GROQ_API_KEY_ANDA = st.secrets["GROQ_API_KEY"]
     GEMINI_API_KEY_ANDA = st.secrets["GEMINI_API_KEY"]
+    
+    # 🔥 SOLUSI FIX UTAMA UTK KUNCI AQ.: Daftarkan API Key langsung ke environment variabel sistem
+    # Ini memaksa SDK memperlakukan kunci AQ. sebagai API Key murni (Bebas dari Error 401 OAuth)
+    os.environ["GEMINI_API_KEY"] = GEMINI_API_KEY_ANDA
 except Exception:
     st.error("Gagal membaca API Key! Pastikan Anda sudah mengisi menu Secrets di Streamlit Cloud dengan benar.")
     st.stop()
@@ -179,43 +190,28 @@ else:
 
             if st.button("🚀 Ekstrak & Jalankan Vision AI", use_container_width=True):
                 with st.spinner("Mengirimkan file gambar ke server Google Vision API..."):
-                    bytes_foto = foto_diunggah.read()
-                    base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
-                    tipe_konten = foto_diunggah.type
+                    try:
+                        bytes_foto = foto_diunggah.read()
+                        tipe_konten = foto_diunggah.type
 
-                    # 💡 SOLUSI LINEAR TOTAL: Menggunakan urllib3 murni tanpa ada blok 'try' bersarang di Modul 2
-                    http = urllib3.PoolManager()
-                    url = f"https://googleapis.com{GEMINI_API_KEY_ANDA}"
-                    
-                    payload = {
-                        "contents": [{
-                            "parts": [
-                                {"text": prompt_perintah},
-                                {
-                                    "inlineData": {
-                                        "mimeType": tipe_konten,
-                                        "data": base64_foto
-                                    }
-                                }
+                        # Inisialisasi klien resmi SDK google-genai
+                        client_gemini = genai.Client(api_key=GEMINI_API_KEY_ANDA)
+                        
+                        # Eksekusi pemrosesan data multimedia resmi lewat saluran terowongan aman SDK
+                        response = client_gemini.models.generate_content(
+                            model='gemini-2.5-flash',
+                            contents=[
+                                prompt_perintah,
+                                types.Part.from_bytes(
+                                    data=bytes_foto,
+                                    mime_type=tipe_konten,
+                                )
                             ]
-                        }]
-                    }
-                    
-                    encoded_data = json.dumps(payload).encode('utf-8')
-                    
-                    response = http.request(
-                        'POST',
-                        url,
-                        body=encoded_data,
-                        headers={'Content-Type': 'application/json'}
-                    )
-                    
-                    if response.status == 200:
-                        response_data = json.loads(response.data.decode('utf-8'))
-                        hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
+                        )
+                        hasil_ekstraksi = response.text
                         
                         st.success("✨ Hasil Pemrosesan Vision AI:")
                         st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
                         st.download_button(label="💾 Unduh Hasil Teks Ekstraksi (.txt)", data=hasil_ekstraksi, file_name="hasil_ocr.txt", mime="text/plain")
-                    else:
-                        st.error(f"Server Google menolak permintaan (Status {response.status}): {response.data.decode('utf-8')}")
+                    except Exception as vision_err:
+                        st.error(f"Terjadi kendala pemrosesan gambar via SDK: {vision_err}")
