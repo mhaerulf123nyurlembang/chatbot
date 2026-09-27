@@ -72,12 +72,13 @@ if prompt := st.chat_input("Tanya sesuatu kepada AI..."):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Kirim ke Google Gemini API (Struktur Indentasi yang Benar)
+    # Kirim ke Google Gemini API 
     try:
-        # Menginisialisasi klien dengan menyuntikkan header khusus agar format AQ. terbaca sebagai API Key murni
+        # PERBAIKAN UTAMA:
+        # Menambahkan parameter vertexai=False agar SDK mengenali kunci 'AQ.' sebagai Developer API Key murni
         client = genai.Client(
             api_key=api_key_env.strip(),
-            http_options={'headers': {'x-goog-api-key': api_key_env.strip()}}
+            vertexai=False
         )
         
         with st.chat_message("assistant"):
