@@ -1,15 +1,16 @@
 import streamlit as st
 import google.generativeai as genai
 
-# ⚠️ TEMPELKAN API KEY GEMINI ANDA LANGSUNG DI BAWAH INI:
+# ⚠️ KODE API KEY GEMINI ANDA SUDAH TERPASANG DI SINI:
 GEMINI_API_KEY_ANDA = "AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg" 
 
-# Validasi dan Inisialisasi API Key
-if GEMINI_API_KEY_ANDA == "AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg" or not GEMINI_API_KEY_ANDA:
-    st.error("Ganti teks 'AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg' di dalam kode dengan Gemini API Key asli Anda!")
+# Inisialisasi API Key secara langsung tanpa pengecekan teks manual
+if not GEMINI_API_KEY_ANDA:
+    st.error("Masukkan Gemini API Key asli Anda!")
     st.stop()
 else:
-    genai.configure(api_key=AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg)
+    genai.configure(api_key=GEMINI_API_KEY_ANDA)
+
 
 st.title("🤖 Chatbot AI Google Gemini")
 st.write("Aplikasi live stabil menggunakan Gemini API secara Gratis.")
