@@ -3,7 +3,7 @@ from groq import Groq
 import os
 from datetime import datetime
 
-# 💡 SOLUSI REKAYASA JARINGAN: Mengimpor SDK Resmi Google GenAI (Aman dari MaxRetryError)
+# Mengimpor SDK Resmi Google GenAI terbaru
 try:
     from google import genai
     from google.genai import types
@@ -16,8 +16,7 @@ try:
     GROQ_API_KEY_ANDA = st.secrets["GROQ_API_KEY"]
     GEMINI_API_KEY_ANDA = st.secrets["GEMINI_API_KEY"]
     
-    # 🔥 SOLUSI FIX UTAMA UTK KUNCI AQ.: Daftarkan API Key langsung ke environment variabel sistem
-    # Ini memaksa SDK memperlakukan kunci AQ. sebagai API Key murni (Bebas dari Error 401 OAuth)
+    # 🔥 SOLUSI KUNCI MUTLAK: Daftarkan kunci AQ. langsung ke lingkungan sistem
     os.environ["GEMINI_API_KEY"] = GEMINI_API_KEY_ANDA
 except Exception:
     st.error("Gagal membaca API Key! Pastikan Anda sudah mengisi menu Secrets di Streamlit Cloud dengan benar.")
@@ -194,10 +193,10 @@ else:
                         bytes_foto = foto_diunggah.read()
                         tipe_konten = foto_diunggah.type
 
-                        # Inisialisasi klien resmi SDK google-genai
-                        client_gemini = genai.Client(api_key=GEMINI_API_KEY_ANDA)
+                        # 💡 FIX 401 UTAMA: Kosongkan inisialisasi Client() agar SDK membaca variabel lingkungan 'GEMINI_API_KEY'
+                        # Cara ini memaksa SDK mengirimkan kunci bertipe AQ. murni lewat header x-goog-api-key bawaan
+                        client_gemini = genai.Client()
                         
-                        # Eksekusi pemrosesan data multimedia resmi lewat saluran terowongan aman SDK
                         response = client_gemini.models.generate_content(
                             model='gemini-2.5-flash',
                             contents=[
