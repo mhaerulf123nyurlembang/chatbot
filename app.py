@@ -5,7 +5,7 @@ import base64
 from datetime import datetime
 
 # ⚠️ TEMPELKAN KUNCI API ANDA DI BAWAH INI:
-GROQ_API_KEY_ANDA = "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"
+GROQ_API_KEY_ANDA = "gsk_aqqW5UkwJ8EwBJ6xlE6wWGdyb3FY424UbUf3cLa7JuCZkCiDsoi4I"
 GEMINI_API_KEY_ANDA = "AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg"
 
 # Set halaman web agar memiliki tata letak yang bagus dan profesional
@@ -81,7 +81,6 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     else:
         client = Groq(api_key=GROQ_API_KEY_ANDA)
 
-    # Menampilkan riwayat obrolan di layar utama
     for msg in st.session_state.groq_messages:
         if msg["role"] != "system":
             with st.chat_message(msg["role"]):
@@ -106,19 +105,15 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                 audio_bytes = input_suara.read()
                 audio_id = hash(audio_bytes)
                 
-                # Mengamankan agar audio hanya ditranskripsi tepat satu kali
-                if st.session_state.last_processed_audio != audio_id:
+                # 💡 Pengaman Audio Sisi Kode
+                if st.session_state.last_processed_audio != audio_id and len(audio_bytes) > 100:
                     with st.spinner("🎙️ Menerjemahkan suara via Groq Whisper..."):
                         try:
-                            # 💡 SOLUSI FIX UTAMA: Membungkus bytes audio ke dalam format file virtual yang valid
-                            # Menghindari error pembacaan tipe data kosong di sisi server Groq Cloud
                             transkripsi = client.audio.transcriptions.create(
                                 model="whisper-large-v3",
                                 file=("rekaman_asli.wav", audio_bytes, "audio/wav"),
                                 response_format="verbose_json"
                             )
-                            
-                            # Mengambil hasil konversi teks dari server Groq
                             prompt_final = transkripsi.text.strip()
                             st.session_state.last_processed_audio = audio_id
                             st.info(f"🗣️ Terdeteksi: \"{prompt_final}\"")
@@ -177,7 +172,7 @@ else:
             instruksi_tambahan = st.text_input("Tuliskan instruksi tambahan (Opsional):")
             
             if "OCR Murni" in opsi_tugas:
-                prompt_perintah = "Lakukan OCR tingkat tinggi. Tolong baca gambar ini dan salin ulang setiap baris teks, huruf, angka, atau simbol yang Anda lihat di dalam gambar ini tanpa menambahkan opini atau kesimpulan Anda. Tulis dalam format teks bersih."
+                prompt_perintah = "Lakukan OCR tingkat tinggi. Tolong baca gambar ini and salin ulang setiap baris teks, huruf, angka, atau simbol yang Anda lihat di dalam gambar ini tanpa menambahkan opini atau kesimpulan Anda. Tulis dalam format teks bersih."
             elif "Kuitansi" in opsi_tugas:
                 prompt_perintah = "Analisislah gambar kuitansi/faktur ini. Identifikasi dan buatkan rangkuman terstruktur yang mencakup nama toko, tanggal transaksi, daftar barang yang dibeli beserta harga masing-masing, serta total biaya akhir."
             else:
@@ -221,3 +216,6 @@ else:
                         hasil_ekstraksi = response_data["candidates"][0]["content"]["parts"][0]["text"]
                         
                         st.success("✨ Hasil Pemrosesan Vision AI:")
+                        st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
+                        st.download_button(label="💾 Unduh Hasil Teks Ekstraksi (.txt)", data=hasil_ekstraksi, file_name="hasil_ocr.txt", mime="text/plain")
+                    else:
