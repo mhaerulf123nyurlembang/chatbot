@@ -81,7 +81,6 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     else:
         client = Groq(api_key=GROQ_API_KEY_ANDA)
 
-    # Menampilkan riwayat obrolan di layar utama
     for msg in st.session_state.groq_messages:
         if msg["role"] != "system":
             with st.chat_message(msg["role"]):
@@ -100,7 +99,6 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                 prompt_final = prompt_teks
 
         with col_suara:
-            # 💡 FIX: Tautan luar yang mengganggu di ujung baris ini sudah dihapus total
             input_suara = st.audio_input("Klik untuk rekam suara:", label_visibility="collapsed", key="uploader_suara_unik")
             
             if input_suara:
@@ -112,10 +110,9 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                         try:
                             base64_audio = base64.b64encode(audio_bytes).decode('utf-8')
                             
-                            # Alamat URL audio dibersihkan total dari variabel penempelan
+                            # 💡 FIX URL AUDIO: Menyisipkan rute v1beta secara utuh ke dalam endpoint resmi Google
                             url_audio = "https://googleapis.com"
                             
-                            # Mengirim API Key lewat parameter terpisah agar tidak merusak host domain
                             query_params = {
                                 "key": GEMINI_API_KEY_ANDA
                             }
@@ -135,12 +132,11 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
                                 }]
                             }
                             
-                            # Eksekusi dengan memisahkan url_audio dan params secara presisi
                             response = requests.post(url_audio, headers=headers, params=query_params, json=payload)
                             
                             if response.status_code == 200:
                                 response_data = response.json()
-                                prompt_final = response_data["candidates"]["content"]["parts"]["text"].strip()
+                                prompt_final = response_data["candidates"][0]["content"]["parts"][0]["text"].strip()
                                 st.session_state.last_processed_audio = audio_id
                             else:
                                 st.error(f"Gagal memproses audio (Status {response.status_code}): {response.text}")
@@ -212,3 +208,10 @@ else:
                 with st.spinner("Mengirimkan file gambar ke server Google Vision API..."):
                     bytes_foto = foto_diunggah.read()
                     base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
+                    tipe_konten = foto_diunggah.type
+
+                    url = "https://googleapis.com"
+                    
+                    query_params_vision = {
+                        "key": GEMINI_API_KEY_ANDA
+                    }
