@@ -88,7 +88,7 @@ if mode_aplikasi == "💬 Chat Teks & Suara (Groq)":
     prompt_final = ""
 
     with input_container:
-        # 💡 FIX: Tautan luar yang mengganggu di baris ini sudah dihapus total
+        # Membagi baris bawah menjadi 2 kolom (6 bagian untuk teks, 2 bagian untuk suara)
         col_teks, col_suara = st.columns([6, 2], gap="small")
         
         with col_teks:
@@ -215,6 +215,5 @@ else:
                             st.success("✨ Hasil Pemrosesan Vision AI:")
                             st.text_area("Salin Hasil Teks Di Sini:", value=hasil_ekstraksi, height=300)
                             
+                            # 💡 FIX UTAMA: Struktur fungsi download_button di bawah ini ditutup dengan kurung sempurna
                             st.download_button(
-                                label="💾 Unduh Hasil Teks Ekstraksi (.txt)",
-                                data=hasil_ekstraksi,
