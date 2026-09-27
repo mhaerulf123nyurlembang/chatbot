@@ -1,8 +1,8 @@
-import streamlit st
+import streamlit as st  # 💡 FIX: Menambahkan kata 'as' yang sempat tertinggal
 from groq import Groq
 
 # ⚠️ TEMPELKAN KUNCI GROQ API ANDA (Wajib Diawali gsk_) DI BAWAH INI:
-GROQ_API_KEY_ANDA = "gsk_aqqW5UkwJ8EwBJ6xlE6wWGdyb3FY424UbUf3cLa7JuCZkCiDsoi4I"
+GROQ_API_KEY_ANDA = "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"
 
 st.title("⚡ Chatbot AI Super Cepat (Powered by Groq)")
 st.write("Aplikasi live gratis menggunakan infrastruktur Groq LPU.")
@@ -42,7 +42,7 @@ if prompt := st.chat_input("Ketik pesan Anda di sini..."):
     # Mengirim data percakapan ke server Groq
     try:
         respons = client.chat.completions.create(
-            model="llama-3.3-70b-versatile", # 💡 FIX UTAMA: Menggunakan model Llama terbaru yang aktif
+            model="llama-3.3-70b-versatile", 
             messages=st.session_state.groq_messages
         )
         
