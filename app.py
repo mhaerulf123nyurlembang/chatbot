@@ -62,7 +62,6 @@ def tool_cari_di_dokumen(query):
 def tool_kalkulator_akurat(ekspresi_matematika):
     """Mengeksekusi perhitungan matematika string secara aman menggunakan Python eval()."""
     try:
-        # Membersihkan karakter berbahaya untuk keamanan sistem
         allowed_chars = "0123456789+-*/(). "
         if all(c in allowed_chars for c in ekspresi_matematika):
             hasil = eval(ekspresi_matematika)
@@ -186,7 +185,7 @@ if prompt := st.chat_input("Perintahkan agen sesuatu..."):
             status_container = st.empty()
             status_container.caption("🧠 *Agen sedang menganalisis perintah...*")
             
-            # PANGGILAN PERTAMA: AI mengevaluasi apakah butuh menggunakan alat (Tool Call)
+            # PANGGILAN PERTAMA: Mengevaluasi kebutuhan penggunaan alat (Tool Call)
             response = client.chat.completions.create(
                 model=selected_model,
                 messages=api_messages,
@@ -195,12 +194,11 @@ if prompt := st.chat_input("Perintahkan agen sesuatu..."):
                 temperature=0.2
             )
             
-            response_message = response.choices[0].message
+            response_message = response.choices.message
             tool_calls = response_message.tool_calls
             
-            # Jika Agen MEMUTUSKAN untuk menggunakan satu atau beberapa alat:
+            # Kondisi A: Agen memutuskan untuk menggunakan satu atau beberapa alat
             if tool_calls:
-                # Masukkan respons awal berisi niat panggilah tool dari AI ke riwayat
                 api_messages.append(response_message)
                 
                 for tool_call in tool_calls:
@@ -209,14 +207,12 @@ if prompt := st.chat_input("Perintahkan agen sesuatu..."):
                     
                     status_container.caption(f"🛠️ *Agen memutuskan memakai alat: `{function_name}`...*")
                     
-                    # Mengeksekusi fungsi lokal berdasarkan pilihan agen
                     target_function = AVAILABLE_TOOLS[function_name]
                     if function_name == "tool_cari_di_dokumen":
                         hasil_tool = target_function(query=function_args.get("query"))
                     elif function_name == "tool_kalkulator_akurat":
                         hasil_tool = target_function(ekspresi_matematika=function_args.get("ekspresi_matematika"))
                         
-                    # Mengirimkan hasil eksekusi tool kembali ke model
                     api_messages.append({
                         "role": "tool",
                         "tool_call_id": tool_call.id,
@@ -226,7 +222,6 @@ if prompt := st.chat_input("Perintahkan agen sesuatu..."):
                 
                 status_container.caption("✍️ *Agen sedang menyusun jawaban final dari data alat...*")
                 
-                # PANGGILAN KEDUA: Mengirimkan hasil olahan alat untuk dirangkum ke teks jawaban final
                 final_completion = client.chat.completions.create(
                     model=selected_model,
                     messages=api_messages,
@@ -235,6 +230,15 @@ if prompt := st.chat_input("Perintahkan agen sesuatu..."):
                 
                 def stream_agent_response():
                     for chunk in final_completion:
-                        if chunk.choices[0].delta.content:
-                            yield chunk.choices[0].delta.content
+                        if chunk.choices.delta.content:
+                            yield chunk.choices.delta.content
                             
+                response_text = st.write_stream(stream_agent_response())
+                status_container.empty()
+                
+            # Kondisi B: Agen memberikan jawaban langsung (tanpa alat)
+            else:
+                status_container.caption("💬 *Memberikan respons langsung...*")
+                
+                direct_completion = client.chat.completions.create(
+                    model=selected_model,
