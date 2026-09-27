@@ -5,7 +5,7 @@ import base64
 from datetime import datetime
 
 # 💡 PERBAIKAN ACADEMY: Membaca API Key dari brankas rahasia secara aman (Bebas dari KeyError)
-GROQ_API_KEY_ANDA = st.secrets["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"]
+GROQ_API_KEY_ANDA = st.secrets"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"
 GEMINI_API_KEY_ANDA = st.secrets["AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg"]
 
 # Set halaman web agar memiliki tata letak yang bagus dan profesional
