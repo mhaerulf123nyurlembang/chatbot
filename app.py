@@ -47,7 +47,6 @@ def retrieve_relevant_context(query, chunks, top_k=3):
     query_vector = vectorizer.transform([query])
     
     similarities = cosine_similarity(query_vector, tfidf_matrix).flatten()
-    # Menghindari error jika jumlah chunk lebih sedikit dari top_k
     actual_k = min(top_k, len(chunks))
     top_indices = similarities.argsort()[-actual_k:][::-1]
     
@@ -55,7 +54,6 @@ def retrieve_relevant_context(query, chunks, top_k=3):
     return relevant_chunks, "\n\n".join(relevant_chunks)
 
 def generate_chat_download_text():
-    """Mengonversi riwayat chat menjadi string teks bersih untuk diunduh."""
     download_str = "=== RIWAYAT PERCAKAPAN CHATBOT AI ===\n\n"
     for msg in st.session_state.messages:
         role_label = "PENGGUNA" if msg["role"] == "user" else "ASISTEN AI"
@@ -79,13 +77,20 @@ with st.sidebar:
     
     document_chunks = []
     if uploaded_file is not None:
-        with st.spinner("Mengekstrak data..."):
+        with st.spinner("Sedang memproses dokumen..."):
             raw_text = extract_text_from_pdf(uploaded_file)
             if raw_text.strip():
                 document_chunks = split_text_into_chunks(raw_text)
                 st.success(f"Berhasil memproses {len(document_chunks)} fragmen data!")
+                # Simpan chunks ke session state agar tetap ada saat halaman rerun
+                st.session_state.document_chunks = document_chunks
             else:
                 st.error("Teks tidak dapat diekstrak.")
+                
+    # Ambil chunks dari session state jika ada data tersimpan sebelumnya
+    if "document_chunks" in st.session_state:
+        document_chunks = st.session_state.document_chunks
+        
     st.markdown("---")
     
     st.subheader("🤖 Pengaturan Otak & Peran")
@@ -114,10 +119,11 @@ with st.sidebar:
     system_instruction = st.text_area("Modifikasi System Prompt:", value=default_prompt)
     st.markdown("---")
     
-    # KONTROL SESI & UNDUH DATA CHAT
     st.subheader("💾 Manajemen Sesi")
     if st.button("🔄 Hapus Riwayat Chat", use_container_width=True):
         st.session_state.messages = []
+        if "document_chunks" in st.session_state:
+            del st.session_state.document_chunks
         st.rerun()
 
 # ==========================================
@@ -133,7 +139,7 @@ if not api_key_env:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# T Tampilkan tombol unduh jika riwayat chat sudah ada isinya
+# Tampilkan tombol unduh jika riwayat chat sudah ada isinya
 if len(st.session_state.messages) > 0:
     chat_text_data = generate_chat_download_text()
     st.download_button(
@@ -181,7 +187,7 @@ if prompt := st.chat_input("Tanyakan analisis dokumen atau instruksi..."):
             status_placeholder = st.empty()
             status_placeholder.caption("📡 *Sedang menghitung pencarian dokumen & mengirim token ke Groq...*")
             
-            # Pengukuran Waktu Respons (Metrik DS/AI Hacktiv8)
+            # Pengukuran Waktu Respons
             start_time = time.time()
             
             completion = client.chat.completions.create(
@@ -200,7 +206,6 @@ if prompt := st.chat_input("Tanyakan analisis dokumen atau instruksi..."):
             end_time = time.time()
             waktu_proses = round(end_time - start_time, 2)
             
-            # Menghapus status loading lama dan menggantinya dengan analitik performa kilat
             status_placeholder.empty()
             st.info(f"⚡ *Response Time:* {waktu_proses} detik | *Sumber Data:* {'Dokumen RAG (PDF)' if context_string else 'General Knowledge'}")
             
@@ -213,7 +218,7 @@ if prompt := st.chat_input("Tanyakan analisis dokumen atau instruksi..."):
                         st.markdown("---")
             
         st.session_state.messages.append({"role": "assistant", "content": response_text})
-        st.invalidate() # Memicu render ulang agar tombol unduh terperbarui jumlah pesannya
+        st.rerun()
 
     except Exception as e:
         st.error(f"Terjadi kesalahan pada Groq API: {e}")
