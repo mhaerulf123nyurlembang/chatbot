@@ -1,52 +1,49 @@
 import streamlit as st
-from openai import OpenAI
+from groq import Groq
 
-# ⚠️ TEMPELKAN KUNCI GROK API (xAI) ANDA YANG BERAWALAN 'xai-' DI BAWAH INI:
-GROK_API_KEY_ANDA = "xai-t6EgbVfke5EH93K9rPHtr2O9jw2Qt92MeE7sao9lOJMni3fUpleeWJAb1zlmILZeUife7ufqIMRFObMB"
+# ⚠️ TEMPELKAN KUNCI GROQ API ANDA (Wajib Diawali gsk_) DI BAWAH INI:
+GROQ_API_KEY_ANDA = "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"
 
-st.title("🧠 Chatbot AI Grok (by xAI)")
-st.write("Aplikasi live stabil terhubung langsung ke mesin kecerdasan Groq xAI.")
+st.title("⚡ Chatbot AI Super Cepat (Powered by Groq)")
+st.write("Aplikasi live gratis menggunakan infrastruktur Groq LPU.")
 
-# Inisialisasi Klien OpenAI dengan Base URL resmi dari xAI
-try:
-    client = OpenAI(
-        base_url="https://api.x.ai/v1",
-        api_key=GROK_API_KEY_ANDA
-    )
-except Exception as e:
-    st.error(f"Gagal memuat sistem: {e}")
+# Inisialisasi Klien Groq Resmi
+if GROQ_API_KEY_ANDA == "gsk_TEMPELKAN_KUNCI_GROQ_ASLI_DI_SINI" or not GROQ_API_KEY_ANDA:
+    st.error("Silakan ganti teks 'gsk_...' di kode GitHub dengan Groq API Key asli Anda!")
+    st.stop()
+else:
+    client = Groq(api_key=GROQ_API_KEY_ANDA)
 
 # Tombol Bersihkan Chat
 if st.button("Sapukan / Bersihkan Chat"):
-    st.session_state.grok_messages = []
+    st.session_state.groq_messages = []
     st.rerun()
 
-# Menginisialisasi riwayat obrolan internal
-if "grok_messages" not in st.session_state:
-    st.session_state.grok_messages = [
-        {"role": "system", "content": "Anda adalah Grok, asisten AI yang cerdas, blak-blakan, dan sangat membantu."}
+# Menginisialisasi riwayat obrolan internal sesuai standar Groq SDK
+if "groq_messages" not in st.session_state:
+    st.session_state.groq_messages = [
+        {"role": "system", "content": "Anda adalah asisten AI yang sangat cerdas, responsif, ramah, dan membantu."}
     ]
 
-# Menampilkan riwayat obrolan di halaman web
-for msg in st.session_state.grok_messages:
+# Menampilkan riwayat obrolan di halaman web Streamlit
+for msg in st.session_state.groq_messages:
     if msg["role"] != "system":
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
 
 # Menerima ketikan pesan baru dari pengguna
-if prompt := st.chat_input("Ketik pesan Anda untuk Grok di sini..."):
+if prompt := st.chat_input("Ketik pesan Anda di sini..."):
     # Tampilkan pesan user ke layar secara instan
     with st.chat_message("user"):
         st.write(prompt)
     
-    st.session_state.grok_messages.append({"role": "user", "content": prompt})
+    st.session_state.groq_messages.append({"role": "user", "content": prompt})
 
-    # Mengirim data percakapan ke Server pusat xAI Grok
+    # Mengirim data percakapan ke server Groq
     try:
-        # Menggunakan model default publik aktif yang cepat dan andal
         respons = client.chat.completions.create(
-            model="grok-beta", 
-            messages=st.session_state.grok_messages
+            model="llama-3.3-70b-versatile", # Model andalan gratis yang sangat cerdas dan cepat
+            messages=st.session_state.groq_messages
         )
         jawaban_ai = respons.choices.message.content
 
@@ -54,7 +51,7 @@ if prompt := st.chat_input("Ketik pesan Anda untuk Grok di sini..."):
         with st.chat_message("assistant"):
             st.write(jawaban_ai)
         
-        st.session_state.grok_messages.append({"role": "assistant", "content": jawaban_ai})
+        st.session_state.groq_messages.append({"role": "assistant", "content": jawaban_ai})
         
     except Exception as e:
-        st.error(f"Gagal memanggil API Grok: {e}")
+        st.error(f"Gagal memanggil Groq API: {e}")
