@@ -1,50 +1,62 @@
 import streamlit as st
-from openai import OpenAI
+from google import genai
 
-# Mengambil API Key secara aman dari sistem rahasia Streamlit Cloud
-try:
-    api_key = st.secrets["AQ.Ab8RN6JsQf1MRwetAwt_tazbKKwL7-DqBxlg4RpfBcHKc2lomg"]
-    client = OpenAI(api_key=api_key)
-except Exception:
-    st.error("API Key belum terpasang di Secrets Streamlit Cloud!")
+# ⚠️ TEMPELKAN API KEY GEMINI ANDA LANGSUNG DI BAWAH INI:
+GEMINI_API_KEY_ANDA = "AIzaSy..." 
+
+# Inisialisasi Klien Google GenAI secara langsung
+if GEMINI_API_KEY_ANDA == "AQ.Ab8RN6JyeYM9pBnmYGztS53vaUYkoLa9N7GlzWroMyHbNIzDWg" or not GEMINI_API_KEY_ANDA:
+    st.error("Ganti teks 'AIzaSy...' di dalam kode dengan Gemini API Key asli Anda!")
     st.stop()
+else:
+    client = genai.Client(api_key=GEMINI_API_KEY_ANDA)
 
-st.title("🤖 Chatbot AI Terverifikasi")
-st.write("Aplikasi live 100% Berhasil.")
+st.title("🤖 Chatbot AI Google Gemini")
+st.write("Aplikasi live menggunakan Gemini API secara Gratis.")
 
-# Membuat tombol untuk hapus riwayat chat jika ingin reset
+# Tombol Bersihkan Chat
 if st.button("Sapukan / Bersihkan Chat"):
-    st.session_state.messages = []
+    st.session_state.gemini_messages = []
     st.rerun()
 
-# Menginisialisasi riwayat chat
-if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {"role": "system", "content": "Anda adalah chatbot handal yang selalu memberikan jawaban akurat."}
-    ]
+# Menginisialisasi riwayat obrolan
+if "gemini_messages" not in st.session_state:
+    st.session_state.gemini_messages = []
 
-# Menampilkan chat yang tersimpan
-for message in st.session_state.messages:
-    if message["role"] != "system":
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
+# Menampilkan riwayat pesan
+for msg in st.session_state.gemini_messages:
+    with st.chat_message(msg["role"]):
+        st.write(msg["text"])
 
-# Input pesan dari pengguna
-if prompt := st.chat_input("Ketik di sini..."):
+# Menerima input dari pengguna
+if prompt := st.chat_input("Ketik pesan Anda untuk Gemini di sini..."):
     with st.chat_message("user"):
         st.write(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    
+    st.session_state.gemini_messages.append({"role": "user", "text": prompt})
 
-    # Mengirim instruksi ke OpenAI API
-    try:
-        respons = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=st.session_state.messages
+    # Menyusun riwayat agar dipahami oleh API Gemini
+    contents_for_api = []
+    for msg in st.session_state.gemini_messages:
+        contents_for_api.append(
+            genai.types.Content(
+                role=msg["role"],
+                parts=[genai.types.Part.from_text(text=msg["text"])]
+            )
         )
-        jawaban_ai = respons.choices[0].message.content
-        
+
+    # Mengirim data ke Model AI Google Gemini
+    try:
+        response = client.models.generate_content(
+            model='gemini-2.5-flash', 
+            contents=contents_for_api,
+        )
+        jawaban_gemini = response.text
+
         with st.chat_message("assistant"):
-            st.write(jawaban_ai)
-        st.session_state.messages.append({"role": "assistant", "content": jawaban_ai})
+            st.write(jawaban_gemini)
+        
+        st.session_state.gemini_messages.append({"role": "assistant", "text": jawaban_gemini})
+        
     except Exception as e:
-        st.error(f"Gagal memanggil AI: {e}")
+        st.error(f"Gagal memanggil Gemini API: {e}")
